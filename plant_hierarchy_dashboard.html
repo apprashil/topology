@@ -1,0 +1,1655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plant Hierarchy - Solar Twin Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+:root{
+  --sidebar-w:256px;--topbar-h:52px;--detail-w:320px;
+  --accent:#1a7f55;--accent-lt:#e6f4ee;
+  --ok:#16a34a;--ok-lt:#dcfce7;
+  --warn:#ca8a04;--warn-lt:#fef9c3;
+  --fault:#dc2626;--fault-lt:#fee2e2;
+  --blue:#1d4ed8;--blue-lt:#eff6ff;
+  --purple:#7c3aed;--purple-lt:#ede9fe;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Inter',sans-serif;font-size:13px;background:#f1f5f9;overflow:hidden;color:#1e293b}
+.shell{display:grid;grid-template-columns:var(--sidebar-w) 1fr var(--detail-w);grid-template-rows:var(--topbar-h) 1fr;height:100vh}
+
+/* TOPBAR */
+.topbar{grid-column:1/-1;display:flex;align-items:center;background:#fff;border-bottom:1px solid #e2e8f0;z-index:200}
+.topbar-brand{display:flex;align-items:center;justify-content:center;padding:0 18px;border-right:1px solid #e2e8f0;height:100%;min-width:var(--sidebar-w)}
+.brand-logo{height:40px;object-fit:contain;transition:opacity .2s}
+.brand-logo:hover{opacity:.85}
+.topbar-plant{display:flex;align-items:center;gap:12px;padding:0 20px;border-right:1px solid #e2e8f0;height:100%}
+.plant-label{font-size:10px;color:#94a3b8;font-weight:500;text-transform:uppercase;letter-spacing:.06em}
+.plant-select{border:none;background:transparent;font-size:14px;font-weight:600;color:#0f172a;font-family:'Inter',sans-serif;cursor:pointer;outline:none}
+.topbar-kpis{display:flex;align-items:center;margin-left:auto}
+.kpi-chip{padding:0 18px;border-left:1px solid #e2e8f0;height:var(--topbar-h);display:flex;flex-direction:column;justify-content:center;text-align:right}
+.kpi-v{font-size:14px;font-weight:700;color:#0f172a}
+.kpi-l{font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em}
+.live-pill{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--accent);background:var(--accent-lt);border:1px solid #a7f3d0;border-radius:20px;padding:3px 10px;margin:0 16px}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:blink 1.5s ease-in-out infinite}
+
+/* SIDEBAR */
+.sidebar{background:#fff;border-right:1px solid #e2e8f0;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column}
+.sidebar::-webkit-scrollbar{width:3px}
+.sidebar::-webkit-scrollbar-thumb{background:#e2e8f0}
+.sb-head{padding:12px 14px 4px;font-size:10px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;flex-shrink:0}
+.tree-row{display:flex;align-items:center;gap:7px;padding:6px 12px;cursor:pointer;transition:background .1s;position:relative;user-select:none}
+.tree-row:hover{background:#f8fafc}
+.tree-row.active{background:#e6f4ee}
+.tree-row.active::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent);border-radius:0 2px 2px 0}
+.tree-toggle{width:14px;height:14px;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:11px;flex-shrink:0;transition:transform .18s}
+.tree-toggle.open{transform:rotate(90deg)}
+.tree-toggle.leaf{opacity:0;pointer-events:none}
+.tree-icon{width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.tree-icon svg{width:13px;height:13px}
+.tree-label{font-size:12px;color:#1e293b;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tree-status{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+/* ── TOOLTIP ── */
+.tree-row{position:relative}
+.tree-row .tt{
+  display:none;
+  position:fixed;
+  /* JS will set left/top dynamically */
+  background:#1e293b;color:#f8fafc;font-size:11px;padding:8px 11px;border-radius:8px;
+  white-space:nowrap;z-index:9999;pointer-events:none;
+  box-shadow:0 4px 20px rgba(0,0,0,.22);
+  min-width:170px;line-height:1.6;
+  transform:translateY(-50%);
+}
+.tree-row .tt::before{
+  content:'';position:absolute;right:100%;top:50%;transform:translateY(-50%);
+  border:5px solid transparent;border-right-color:#1e293b
+}
+.tree-row:hover .tt{display:block}
+.status-ok{background:var(--ok)}
+.status-warn{background:var(--warn)}
+.status-fault{background:var(--fault)}
+.tree-add{width:14px;height:14px;display:flex;align-items:center;justify-content:center;color:#cbd5e1;flex-shrink:0;border-radius:3px;transition:background .1s,color .1s}
+.tree-add:hover{background:#dcfce7;color:var(--accent)}
+.tree-add svg{width:10px;height:10px}
+.tree-children{display:none}
+.tree-children.open{display:block}
+.bg-plant{background:#dcfce7;color:#085041}
+.bg-dno{background:#dbeafe;color:#0c447c}
+.bg-css{background:#ede9fe;color:#3c3489}
+.bg-swg{background:#fef3c7;color:#633806}
+.bg-tx{background:#fee2e2;color:#712b13}
+.bg-inv{background:#f3e8ff;color:#6b21a8}
+.bg-scb{background:#fefce8;color:#a16207}
+.bg-str{background:#f0fdf4;color:#274f0a}
+.bg-panel{background:#f0fdf4;color:#14532d}
+
+/* MAIN */
+.main{overflow-y:auto;background:#f1f5f9}
+.main::-webkit-scrollbar{width:4px}
+.main::-webkit-scrollbar-thumb{background:#cbd5e1}
+.main-inner{padding:20px 22px}
+.bc{font-size:11px;margin-bottom:14px}
+.bc a{color:var(--accent);text-decoration:none;cursor:pointer}
+.bc a:hover{text-decoration:underline}
+.page-title{font-size:20px;font-weight:700;color:#0f172a;line-height:1.2}
+.page-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:500;padding:2px 8px;border-radius:20px;border:1px solid}
+.tag-ok{background:var(--ok-lt);color:var(--ok);border-color:#86efac}
+.tag-warn{background:var(--warn-lt);color:var(--warn);border-color:#fde047}
+.tag-fault{background:var(--fault-lt);color:var(--fault);border-color:#fca5a5}
+.tag-info{background:var(--blue-lt);color:var(--blue);border-color:#bfdbfe}
+.tag-level{background:#f1f5f9;color:#475569;border-color:#cbd5e1}
+.tag-serial{background:#ede9fe;color:var(--purple);border-color:#c4b5fd;font-family:monospace;letter-spacing:.02em}
+.tag-no-serial{background:#fff7ed;color:#c2410c;border-color:#fed7aa}
+
+/* serial number inline edit */
+.sn-box{display:flex;align-items:center;gap:6px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;margin-bottom:14px}
+.sn-box svg{width:14px;height:14px;flex-shrink:0;color:#7c3aed}
+.sn-label{font-size:10px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-right:4px}
+.sn-val{font-size:12px;font-weight:600;color:#0f172a;font-family:monospace;flex:1}
+.sn-missing{font-size:12px;color:#c2410c;font-style:italic;flex:1}
+.sn-edit-btn{font-size:10px;padding:2px 8px;border-radius:6px;border:1px solid #e2e8f0;background:#fff;color:#64748b;cursor:pointer;white-space:nowrap}
+.sn-edit-btn:hover{background:#f1f5f9;border-color:#cbd5e1}
+
+/* fault banner */
+.fault-banner{border-radius:10px;padding:10px 14px;margin-bottom:16px;display:flex;align-items:flex-start;gap:10px}
+.fault-banner svg{flex-shrink:0;width:16px;height:16px;margin-top:1px}
+.fb-fault{background:#fff5f5;border:1px solid #fca5a5}
+.fb-warn{background:#fefce8;border:1px solid #fde047}
+
+/* kpi cards */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+.kpi-card{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px;position:relative;overflow:hidden}
+.kpi-card .bar{position:absolute;top:0;left:0;right:0;height:3px;border-radius:10px 10px 0 0}
+.kpi-val{font-size:21px;font-weight:700;color:#0f172a;margin:4px 0 2px}
+.kpi-lbl{font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em}
+.kpi-delta{font-size:11px;margin-top:5px}
+.sec{font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.07em;padding-bottom:6px;border-bottom:1px solid #e2e8f0;margin-bottom:12px}
+
+/* children grid */
+.child-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}
+.child-card{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:13px;cursor:pointer;transition:box-shadow .15s,transform .15s}
+.child-card:hover{box-shadow:0 3px 14px rgba(0,0,0,.08);transform:translateY(-1px)}
+.child-card.is-fault{border-color:#fca5a5;background:#fff5f5}
+.child-card.is-warn{border-color:#fde047}
+.child-lbar{height:3px;border-radius:2px;margin-bottom:10px}
+.child-name{font-size:13px;font-weight:600;color:#0f172a}
+.child-sn{font-size:10px;color:#7c3aed;font-family:monospace;margin-bottom:2px}
+.child-sub{font-size:11px;color:#94a3b8;margin-bottom:8px}
+.child-stats{display:flex;gap:8px;flex-wrap:wrap}
+.child-stat{font-size:11px;color:#475569;display:flex;align-items:center;gap:4px}
+.child-stat-dot{width:6px;height:6px;border-radius:50%}
+.add-child-card{background:#f8fafc;border:1.5px dashed #cbd5e1;border-radius:10px;padding:13px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;transition:border-color .15s,background .15s;min-height:100px}
+.add-child-card:hover{border-color:var(--accent);background:var(--accent-lt)}
+.add-child-card svg{width:20px;height:20px;color:#94a3b8;transition:color .15s}
+.add-child-card:hover svg{color:var(--accent)}
+.add-child-card span{font-size:12px;color:#94a3b8;font-weight:500;transition:color .15s}
+.add-child-card:hover span{color:var(--accent)}
+
+/* tabs */
+.tab-nav{display:flex;gap:4px;background:#fff;border-radius:8px;padding:4px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.08);border:1px solid #e2e8f0}
+.tab-btn{flex:1;text-align:center;padding:8px 12px;font-size:11px;font-weight:500;color:#64748b;border:none;background:transparent;border-radius:6px;cursor:pointer;transition:background .15s,color .15s}
+.tab-btn:hover{background:#f8fafc;color:#475569}
+.tab-btn.active{background:var(--accent);color:#fff;box-shadow:0 2px 4px rgba(26,127,85,.2)}
+.tab-pane{display:none}
+.tab-pane.active{display:block}
+
+/* sparkline */
+.spark-card{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px}
+.spark-title{font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em}
+.spark-val{font-size:18px;font-weight:700;color:#0f172a;margin:2px 0 8px}
+.spark-unit{font-size:11px;color:#94a3b8}
+.spark-svg{width:100%;display:block;overflow:visible}
+
+/* activity */
+.act-item{display:flex;align-items:flex-start;gap:10px;padding:8px 10px;border-radius:8px;transition:background .1s}
+.act-item:hover{background:#f8fafc}
+.act-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.act-icon svg{width:14px;height:14px}
+.act-body{flex:1}
+.act-text{font-size:12px;color:#334155}
+.act-text strong{color:#0f172a}
+.act-meta{font-size:10px;color:#94a3b8;margin-top:2px}
+
+/* maintenance */
+.maint-row{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid #f1f5f9;align-items:flex-start}
+.maint-row:last-child{border-bottom:none}
+.maint-date{font-size:11px;color:#64748b;width:76px;flex-shrink:0}
+.maint-body{flex:1}
+.maint-title{font-size:12px;font-weight:500;color:#0f172a}
+.maint-sub{font-size:11px;color:#94a3b8}
+.maint-badge{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:500;white-space:nowrap}
+
+/* replace history */
+.repl-row{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9;align-items:flex-start}
+.repl-row:last-child{border-bottom:none}
+.repl-dot{width:9px;height:9px;border-radius:50%;border:2px solid;flex-shrink:0;margin-top:3px}
+.repl-body{flex:1}
+.repl-title{font-size:12px;font-weight:500;color:#0f172a}
+.repl-sub{font-size:11px;color:#94a3b8}
+
+/* DETAIL */
+.detail{background:#fff;border-left:1px solid #e2e8f0;overflow-y:auto;display:flex;flex-direction:column}
+.detail::-webkit-scrollbar{width:3px}
+.detail::-webkit-scrollbar-thumb{background:#e2e8f0}
+.detail-hdr{padding:14px 16px;border-bottom:1px solid #e2e8f0;position:sticky;top:0;background:#fff;z-index:5}
+.detail-title{font-size:14px;font-weight:700;color:#0f172a}
+.detail-sub{font-size:11px;color:#94a3b8}
+.detail-body{padding:14px 16px;flex:1}
+.d-sec{font-size:10px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em;margin:14px 0 6px}
+.d-sec:first-child{margin-top:0}
+.d-kv{display:flex;justify-content:space-between;align-items:flex-start;padding:5px 0;border-bottom:1px solid #f8fafc;font-size:12px}
+.d-kv:last-child{border-bottom:none}
+.d-k{color:#64748b}
+.d-v{color:#0f172a;font-weight:500;text-align:right;max-width:58%}
+
+/* ── HIERARCHY DIAGRAM ── */
+.hier-diagram{width:100%;overflow-x:auto;padding:4px 0 8px}
+.hd-track{display:flex;flex-direction:column;gap:0;position:relative}
+.hd-node{display:flex;align-items:center;gap:0;position:relative}
+.hd-connector{display:flex;flex-direction:column;align-items:center;width:20px;flex-shrink:0}
+.hd-connector-v{width:1px;height:10px;background:#e2e8f0}
+.hd-connector-h{display:flex;align-items:center;gap:0;width:20px}
+.hd-h-line{width:10px;height:1px;background:#e2e8f0}
+.hd-chip{display:flex;align-items:center;gap:6px;padding:5px 9px;border-radius:8px;border:1.5px solid #e2e8f0;background:#fff;cursor:default;transition:border-color .15s;margin:2px 0;flex:1}
+.hd-chip.hd-cur{border-width:2px}
+.hd-chip-icon{width:18px;height:18px;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.hd-chip-icon svg{width:10px;height:10px}
+.hd-chip-body{min-width:0}
+.hd-chip-label{font-size:11px;font-weight:600;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hd-chip-level{font-size:9px;color:#94a3b8;white-space:nowrap}
+.hd-chip-sn{font-size:9px;color:#7c3aed;font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hd-vwrap{display:flex;flex-direction:column;align-items:center}
+.hd-vline{width:1px;flex:1;min-height:8px;background:#e2e8f0}
+.hd-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+
+/* ── MAP TAB ── */
+.map-wrap{position:relative;background:#f0f4f0;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;user-select:none}
+.map-svg{display:block;width:100%}
+/* building zones */
+.map-zone{fill:#e8f0e8;stroke:#c5d8c5;stroke-width:1;rx:6}
+.map-zone-label{font-size:9px;fill:#6b8c6b;font-family:'Inter',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+/* road/path lines */
+.map-road{stroke:#d4dccc;stroke-width:2;fill:none;stroke-dasharray:4,4}
+/* equipment pins */
+.map-pin{cursor:pointer;transition:transform .15s}
+.map-pin:hover{transform-origin:center center}
+.map-pin-ring{transition:r .15s}
+.map-pin.selected .map-pin-ring{r:10}
+/* pin pulse for faults */
+@keyframes mapPulse{0%,100%{opacity:1;r:10}50%{opacity:.4;r:14}}
+.map-fault-pulse{animation:mapPulse 1.8s ease-in-out infinite;fill:none;stroke:#dc2626;stroke-width:1.5}
+/* map legend - collapsible */
+.map-legend{position:absolute;bottom:10px;left:10px;background:rgba(255,255,255,.96);border:1px solid #e2e8f0;border-radius:8px;font-size:10px;color:#475569;backdrop-filter:blur(6px);box-shadow:0 2px 8px rgba(0,0,0,.08);transition:all .2s}
+.map-legend-toggle{display:flex;align-items:center;justify-content:space-between;padding:6px 8px;cursor:pointer;user-select:none;font-weight:600;color:#475569;gap:8px}
+.map-legend-toggle:hover{background:#f8fafc}
+.map-legend-icon{font-size:13px;transition:transform .2s}
+.map-legend.collapsed .map-legend-icon{transform:rotate(180deg)}
+.map-legend-body{padding:4px 8px 8px;display:none}
+.map-legend.expanded .map-legend-body{display:block}
+.map-legend-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;padding:2px 0}
+.map-legend-row:last-child{margin-bottom:0}
+.map-legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+/* map info card - repositioned */
+.map-info{position:absolute;top:10px;right:10px;background:rgba(255,255,255,.98);border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;font-size:12px;min-width:180px;max-width:220px;box-shadow:0 4px 20px rgba(0,0,0,.12);display:none;backdrop-filter:blur(8px);z-index:10}
+.map-info.visible{display:block;animation:mapInfoSlide .2s ease-out}
+@keyframes mapInfoSlide{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+.map-info-close{position:absolute;top:8px;right:8px;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#94a3b8;font-size:16px;transition:all .15s}
+.map-info-close:hover{background:#f1f5f9;color:#64748b}
+.map-info-title{font-weight:600;color:#0f172a;margin-bottom:2px}
+.map-info-sub{font-size:10px;color:#94a3b8;margin-bottom:6px}
+.map-info-row{display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-bottom:1px solid #f1f5f9}
+.map-info-row:last-child{border:none}
+.map-info-k{color:#64748b}
+.map-info-v{color:#0f172a;font-weight:500}
+/* no-geo state */
+.map-no-geo{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center;color:#94a3b8;gap:8px}
+.map-no-geo svg{width:36px;height:36px;opacity:.4}
+/* map geofence marker */
+.map-geofence{stroke:#1d4ed8;stroke-width:1.5;stroke-dasharray:6,3;fill:#1d4ed8;fill-opacity:.04}
+/* zoom controls - moved to bottom right */
+.map-zoom{position:absolute;bottom:10px;right:10px;display:flex;flex-direction:column;gap:3px}
+.map-zoom-btn{width:32px;height:32px;background:rgba(255,255,255,.96);border:1px solid #e2e8f0;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;font-weight:600;color:#475569;transition:all .15s;backdrop-filter:blur(6px);box-shadow:0 2px 6px rgba(0,0,0,.06)}
+.map-zoom-btn:hover{background:#fff;border-color:#cbd5e1;transform:scale(1.05)}
+.map-zoom-btn:active{transform:scale(.95)}
+/* history combined tab */
+.hist-section-head{font-size:11px;font-weight:600;color:#0f172a;margin:14px 0 8px;padding-bottom:6px;border-bottom:2px solid #e2e8f0;display:flex;align-items:center;gap:6px}
+.hist-section-head svg{width:13px;height:13px}
+
+/* unified history row */
+.hist-row{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid #f1f5f9;align-items:flex-start}
+.hist-row:last-child{border-bottom:none}
+.hist-date{font-size:11px;color:#64748b;width:76px;flex-shrink:0}
+.hist-body{flex:1}
+.hist-title{font-size:12px;font-weight:500;color:#0f172a}
+.hist-sub{font-size:11px;color:#94a3b8}
+.hist-badge{font-size:10px;padding:3px 9px;border-radius:12px;font-weight:500;white-space:nowrap;flex-shrink:0}
+
+/* pagination */
+.hist-pagination{display:flex;align-items:center;justify-content:space-between;margin-top:16px;padding-top:12px;border-top:1px solid #e2e8f0}
+.hist-page-info{font-size:11px;color:#64748b}
+.hist-page-btns{display:flex;gap:4px}
+.hist-page-btn{padding:4px 10px;font-size:11px;border:1px solid #e2e8f0;border-radius:6px;background:#fff;color:#475569;cursor:pointer;transition:background .1s,border-color .1s;font-weight:500}
+.hist-page-btn:hover:not(:disabled){background:#f8fafc;border-color:#cbd5e1}
+.hist-page-btn:disabled{opacity:.4;cursor:not-allowed}
+.hist-page-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+.act-group{margin-bottom:10px}
+.act-group-label{font-size:9px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px}
+.act-row{display:flex;gap:5px;margin-bottom:0}
+.act-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:7px 8px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;font-size:11px;font-weight:500;cursor:pointer;transition:background .12s,border-color .12s;color:#334155;text-align:center;white-space:nowrap}
+.act-btn:hover{background:#f8fafc;border-color:#cbd5e1}
+.act-btn svg{width:13px;height:13px;flex-shrink:0}
+.act-btn.full{flex:unset;width:100%;justify-content:flex-start;padding:8px 10px;margin-bottom:5px;font-size:12px}
+.act-btn.primary{background:#e6f4ee;border-color:#a7f3d0;color:var(--accent)}
+.act-btn.primary:hover{background:#d1fae5}
+.act-btn.add{background:#ede9fe;border-color:#c4b5fd;color:#6d28d9}
+.act-btn.add:hover{background:#ddd6fe}
+.act-btn.warn{background:#fef9c3;border-color:#fde047;color:var(--warn)}
+.act-btn.warn:hover{background:#fef08a}
+.act-btn.danger{background:#fee2e2;border-color:#fca5a5;color:var(--fault)}
+.act-btn.danger:hover{background:#fecaca}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:1000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
+.modal-overlay.open{display:flex}
+.modal-box{background:#fff;border-radius:14px;padding:24px;width:460px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.18);max-height:90vh;overflow-y:auto}
+.modal-box::-webkit-scrollbar{width:3px}
+.modal-box::-webkit-scrollbar-thumb{background:#e2e8f0}
+.modal-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:12px}
+.modal-icon svg{width:18px;height:18px}
+.modal-title{font-size:16px;font-weight:700;color:#0f172a;margin-bottom:4px}
+.modal-sub{font-size:12px;color:#64748b;margin-bottom:18px;line-height:1.5}
+.mf{margin-bottom:12px}
+.mf label{display:block;font-size:11px;font-weight:600;color:#475569;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em}
+.mf input,.mf select,.mf textarea{width:100%;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;font-size:13px;font-family:'Inter',sans-serif;color:#0f172a;outline:none;transition:border-color .15s;background:#fff}
+.mf input:focus,.mf select:focus,.mf textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(26,127,85,.1)}
+.mf .hint{font-size:11px;color:#94a3b8;margin-top:4px}
+.mf .sn-required{font-size:11px;color:#c2410c;margin-top:4px;font-weight:500}
+/* child type picker */
+.child-type-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
+.ct-option{border:1.5px solid #e2e8f0;border-radius:8px;padding:10px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:8px}
+.ct-option:hover{border-color:#a7f3d0;background:#f0fdf9}
+.ct-option.selected{border-color:var(--accent);background:var(--accent-lt)}
+.ct-option .ct-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ct-option .ct-icon svg{width:14px;height:14px}
+.ct-option .ct-name{font-size:12px;font-weight:600;color:#0f172a}
+.ct-option .ct-level{font-size:10px;color:#94a3b8}
+/* sn step indicator */
+.step-row{display:flex;gap:0;margin-bottom:16px}
+.step{flex:1;text-align:center;font-size:10px;font-weight:600;padding:6px 4px;border-bottom:2px solid #e2e8f0;color:#94a3b8;transition:all .2s}
+.step.active{border-bottom-color:var(--accent);color:var(--accent)}
+.step.done{border-bottom-color:#86efac;color:var(--ok)}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid #f1f5f9}
+.mbtn{padding:8px 18px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid;transition:background .12s}
+.mbtn-cancel{background:#fff;border-color:#e2e8f0;color:#475569}
+.mbtn-cancel:hover{background:#f8fafc}
+.mbtn-ok{background:var(--accent);border-color:var(--accent);color:#fff}
+.mbtn-ok:hover{background:#166641}
+.mbtn-warn{background:#dc2626;border-color:#dc2626;color:#fff}
+.mbtn-warn:hover{background:#b91c1c}
+.mbtn-purple{background:#7c3aed;border-color:#7c3aed;color:#fff}
+.mbtn-purple:hover{background:#6d28d9}
+
+/* TOAST */
+.toast-wrap{position:fixed;bottom:20px;right:20px;z-index:2000;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px 14px;box-shadow:0 4px 20px rgba(0,0,0,.12);font-size:12px;color:#334155;display:flex;align-items:center;gap:8px;min-width:230px;animation:slideUp .25s ease}
+@keyframes slideUp{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+.toast svg{width:15px;height:15px;flex-shrink:0}
+.toast.t-ok{border-left:3px solid var(--ok)}
+.toast.t-warn{border-left:3px solid var(--warn)}
+.toast.t-fault{border-left:3px solid var(--fault)}
+.toast.t-purple{border-left:3px solid var(--purple)}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar-brand">
+    <img src="https://dev-admin.brighter-app.com/static/media/bge_logo.4eee7fa3.png" alt="Brighter Green Energy" class="brand-logo">
+  </div>
+  <div class="topbar-plant">
+    <div>
+      <div class="plant-label">Active plant</div>
+      <select class="plant-select" id="plant-switcher" onchange="switchPlant(this.value)">
+        <option value="priors">Priors Byne Solar Farm</option>
+        <option value="alpha">Alpha Fields Solar Park</option>
+      </select>
+    </div>
+  </div>
+  <div class="live-pill"><div class="live-dot"></div>Live · 8s ago</div>
+  <div class="topbar-kpis">
+    <div class="kpi-chip"><div class="kpi-v" id="hdr-output">4.2 MW</div><div class="kpi-l">Output</div></div>
+    <div class="kpi-chip"><div class="kpi-v">96.4%</div><div class="kpi-l">Availability</div></div>
+    <div class="kpi-chip"><div class="kpi-v text-danger" id="hdr-tickets">3</div><div class="kpi-l">Open tickets</div></div>
+    <div class="kpi-chip"><div class="kpi-v" id="hdr-assets">48</div><div class="kpi-l">Assets</div></div>
+  </div>
+</header>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sb-head">Asset hierarchy</div>
+  <div id="tree-root"></div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="main-inner" id="main-content">
+    <div class="text-center text-muted mt-5" style="font-size:13px">Select a node to view details</div>
+  </div>
+</main>
+
+<!-- DETAIL -->
+<aside class="detail">
+  <div class="detail-hdr">
+    <div class="detail-title" id="detail-title">Select an asset</div>
+    <div class="detail-sub" id="detail-sub">Click any node in the tree or grid</div>
+  </div>
+  <div class="detail-body" id="detail-body">
+    <div class="text-center text-muted mt-4" style="font-size:12px">No asset selected</div>
+  </div>
+</aside>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal" onclick="maybeCloseModal(event)">
+  <div class="modal-box" id="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-icon" id="modal-icon"></div>
+    <div class="modal-title" id="modal-title"></div>
+    <div class="modal-sub" id="modal-sub"></div>
+    <div id="modal-body"></div>
+    <div class="modal-actions" id="modal-actions"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+// ═══════════════════════════════════════
+// SVG ICONS
+// ═══════════════════════════════════════
+const I = {
+  plant:   `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 2"/></svg>`,
+  dno:     `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 17L10 3l7 14H3z"/><path d="M10 13v2"/><circle cx="10" cy="11" r=".8" fill="currentColor" stroke="none"/></svg>`,
+  css:     `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="14" height="10" rx="2"/><path d="M7 9h6M7 12h4"/></svg>`,
+  swg:     `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5h12M4 10h12M4 15h8"/><circle cx="15" cy="15" r="2"/></svg>`,
+  tx:      `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="8" r="3"/><circle cx="13" cy="12" r="3"/><path d="M7 5V3M13 17v-2M4 8H2M18 12h-2"/></svg>`,
+  inv:     `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="6" width="14" height="8" rx="2"/><path d="M8 10l2-2 2 2M10 8v4"/></svg>`,
+  scb:     `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 10h4l2-4 2 8 2-4h4"/></svg>`,
+  str:     `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="5" width="16" height="4" rx="1"/><rect x="2" y="11" width="16" height="4" rx="1"/><path d="M6 5V4M10 5V4M14 5V4M6 15v1M10 15v1M14 15v1"/></svg>`,
+  panel:   `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="4" width="16" height="12" rx="1"/><line x1="2" y1="10" x2="18" y2="10"/><line x1="9" y1="4" x2="9" y2="16"/></svg>`,
+  ticket:  `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h12a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1z"/><path d="M7 8h6M7 11h4"/></svg>`,
+  log:     `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 3h10a1 1 0 011 1v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M7 7h6M7 10h6M7 13h3"/></svg>`,
+  wrench:  `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15.5 4.5a4 4 0 00-5.28 5.28L4.5 15.5a1.41 1.41 0 002 2l5.72-5.72A4 4 0 0015.5 4.5z"/></svg>`,
+  move:    `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3v14M3 10h14"/><path d="M7 6L3 10l4 4M13 6l4 4-4 4"/></svg>`,
+  swap:    `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 7l4-4 4 4M8 3v10M16 13l-4 4-4-4M12 17V7"/></svg>`,
+  detach:  `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 12l-4 4M12 8l4-4"/><circle cx="6" cy="14" r="2.5"/><circle cx="14" cy="6" r="2.5"/><path d="M9.5 10.5l1-1"/></svg>`,
+  alert:   `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3L2 17h16L10 3z"/><path d="M10 9v4"/><circle cx="10" cy="14.5" r=".8" fill="currentColor" stroke="none"/></svg>`,
+  check:   `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 10l5 5 7-8"/></svg>`,
+  info:    `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 9v5"/><circle cx="10" cy="6.5" r=".8" fill="currentColor" stroke="none"/></svg>`,
+  replace: `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 8a6 6 0 0110.7-2.7"/><path d="M16 12a6 6 0 01-10.7 2.7"/><path d="M14.7 5.3L15 8l2.7-.3M5.3 14.7L5 12l-2.7.3"/></svg>`,
+  plus:    `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 4v12M4 10h12"/></svg>`,
+  serial:  `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="6" width="16" height="8" rx="2"/><path d="M5 10h2M9 10h2M13 10h2"/></svg>`,
+  edit:    `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.5 3.5a1.5 1.5 0 012 2L7 15l-3 1 1-3L14.5 3.5z"/></svg>`,
+};
+
+// ═══════════════════════════════════════
+// ALLOWED CHILDREN PER LEVEL
+// ═══════════════════════════════════════
+const CHILD_TYPES = {
+  plant:    [],
+  dno:      [],
+  css:      [{type:'swg',label:'Switchgear Group',level:'L2 - SWG',bg:'bg-swg',icon:'swg',serialRequired:true}],
+  swg:      [{type:'sswg',label:'Station SWG',level:'L3 - Station SWG',bg:'bg-swg',icon:'swg',serialRequired:false}],
+  sswg:     [{type:'tx',label:'Transformer (TX)',level:'L4 - TX',bg:'bg-tx',icon:'tx',serialRequired:true}],
+  tx:       [
+    {type:'inv',label:'Inverter',level:'L5 - Inverter',bg:'bg-inv',icon:'inv',serialRequired:true},
+  ],
+  inv:      [
+    {type:'scb',label:'String Combiner Box',level:'L6 - SCB',bg:'bg-scb',icon:'scb',serialRequired:false},
+  ],
+  'inv-unit':[
+    {type:'scb',label:'String Combiner Box',level:'L6 - SCB',bg:'bg-scb',icon:'scb',serialRequired:false},
+  ],
+  scb:      [{type:'str',label:'String',level:'L8 - String',bg:'bg-str',icon:'str',serialRequired:false}],
+  str:      [{type:'panel',label:'Panel',level:'L9 - Panel',bg:'bg-panel',icon:'panel',serialRequired:false}],
+  panel:    [],
+};
+
+// serial number required for physical equipment
+const SERIAL_REQUIRED_TYPES = new Set(['swg','sswg','tx','inv','inv-unit','scb']);
+const SERIAL_OPTIONAL_TYPES = new Set(['str','panel']);
+
+// label map
+const LEVEL_LABELS = {plant:'Plant',dno:'L0 - DNO',css:'L1 - CSS',swg:'L2 - SWG',sswg:'L3 - Station SWG',tx:'L4 - TX',inv:'L5 - Inverter','inv-unit':'L5 - Inverter unit',scb:'L6 - SCB',str:'L8 - String',panel:'L9 - Panel'};
+const LEVEL_COLORS = {plant:'#085041',dno:'#0c447c',css:'#3c3489',swg:'#633806',sswg:'#633806',tx:'#712b13',inv:'#6b21a8','inv-unit':'#6b21a8',scb:'#a16207',str:'#274f0a',panel:'#14532d'};
+const LEVEL_BAR    = {plant:'#5DCAA5',dno:'#85B7EB',css:'#AFA9EC',swg:'#EF9F27',sswg:'#EF9F27',tx:'#F0997B',inv:'#c084fc','inv-unit':'#c084fc',scb:'#fcd34d',str:'#97c459',panel:'#86efac'};
+
+// ═══════════════════════════════════════
+// PLANT DATA
+// ═══════════════════════════════════════
+function mkId(){ return 'n-'+Math.random().toString(36).slice(2,8); }
+
+const PLANTS = {
+  priors: { name:'Priors Byne Solar Farm', output:'4.2 MW', avail:'96.4%', tickets:3, tree: priorsTree() },
+  alpha:  { name:'Alpha Fields Solar Park', output:'2.8 MW', avail:'91.2%', tickets:5, tree: alphaTree() }
+};
+
+function node(id,type,label,sub,iconKey,bg,status,serial,output,invType,attrs,children,geo){
+  return {id,type,label,sub,iconKey,bg,status,serial,output,invType:invType||null,attrs:attrs||[],children:children||[],geo:geo||null};
+}
+
+function priorsTree(){
+  return node('plant-1','plant','Priors Byne','Pool inverter site - 5 MW','plant','bg-plant','ok',null,'4.2 MW',null,
+    [{k:'Capacity',v:'5 MW'},{k:'Commissioned',v:'Jun 2020'},{k:'Inverter type',v:'Pool'}],[
+    node('dno-1','dno','DNO','National Grid ESO','dno','bg-dno','ok','SN-DNO-UK-001',null,null,
+      [{k:'Licence',v:'NG-4421'},{k:'Voltage',v:'132 kV'},{k:'Since',v:'Mar 2019'}],[
+      node('css-1','css','CSS Main','Central Switching Station','css','bg-css','ok','SN-CSS-PB-001','4.2 MW',null,
+        [{k:'Rating',v:'5 MVA'},{k:'Installed',v:'Jun 2020'}],[
+        node('swg-1a','swg','SWG 1a','Switchgear group','swg','bg-swg','ok','SN-SWG-001','2.1 MW',null,
+          [{k:'Rating',v:'3.5 MVA'},{k:'Last PM',v:'01 Apr 2026'}],[
+          node('st1-swg','sswg','Station 1 SWG','SWG1 + SWG2','swg','bg-swg','ok','SN-SSWG-001',null,null,
+            [{k:'Panels below',v:'216'}],[
+            node('tx-1','tx','Station 1 TX','TX1 + TX2','tx','bg-tx','ok','SN-TX-0041','1.05 MW',null,
+              [{k:'Rating',v:'1.5 MVA'},{k:'Oil sample',v:'14 Apr 2026'}],[
+              node('inv-1','inv','Inverter/s 1','Pool - shared strings','inv','bg-inv','ok','SN-INV-PB-001','350 kW','Pool',
+                [{k:'Output',v:'350 kW'},{k:'Temp',v:'44°C'}],[
+                node('inv-1-1','inv-unit','Inverter 1.1','118 kW','inv','bg-inv','ok','SN-44820','118 kW','Pool',[{k:'Output',v:'118 kW'},{k:'Temp',v:'42°C'}],[],{x:38,y:52,building:'Inverter Room A'}),
+                node('inv-1-2','inv-unit','Inverter 1.2','120 kW','inv','bg-inv','ok','SN-44821','120 kW','Pool',[{k:'Output',v:'120 kW'},{k:'Temp',v:'45°C'}],[],{x:54,y:52,building:'Inverter Room A'}),
+                node('inv-1-3','inv-unit','Inverter 1.3','Over-temp warning','inv','bg-inv','warn','SN-44822','112 kW','Pool',[{k:'Output',v:'112 kW'},{k:'Temp',v:'58°C ⚠'}],[],{x:70,y:52,building:'Inverter Room A'}),
+              ],{x:54,y:44,building:'Inverter Room A'}),
+            ],{x:54,y:36,building:'Station 1 Block'}),
+          ],{x:40,y:28,building:'Station 1 Block'}),
+          node('st2-swg','sswg','Station 2 SWG','SWG1 + SWG2','swg','bg-swg','fault','SN-SSWG-002',null,null,
+            [{k:'Panels below',v:'288'}],[
+            node('tx-2','tx','Station 2 TX','TX1 + TX2','tx','bg-tx','fault','SN-TX-0042','980 kW',null,
+              [{k:'Rating',v:'1.5 MVA'},{k:'Task',v:'#882 - trip fault'}],[
+              node('inv-2-1','inv','Inverter 2.1','FAULT - tripped','inv','bg-inv','fault','SN-12312','0 kW','String',
+                [{k:'Status',v:'FAULT - tripped'}],[
+                node('scb-2-1','scb','SCB 2.1','0 kW - check fuses','scb','bg-scb','fault','SN-SCB-001','0 kW',null,[{k:'Strings',v:'6'},{k:'Fuses',v:'Check required'}],[],{x:38,y:72,building:'Station 2 Block'}),
+              ],{x:38,y:64,building:'Station 2 Block'}),
+              node('inv-2-2','inv','Inverter 2.2','490 kW','inv','bg-inv','ok','SN-1232','490 kW','String',
+                [{k:'Output',v:'490 kW'}],[
+                node('scb-2-2','scb','SCB 2.2','245 kW','scb','bg-scb','ok','SN-SCB-002','245 kW',null,[{k:'Strings',v:'6'}],[],{x:56,y:72,building:'Station 2 Block'}),
+                node('scb-2-3','scb','SCB 2.3','245 kW','scb','bg-scb','ok','SN-SCB-003','245 kW',null,[{k:'Strings',v:'6'}],[],{x:72,y:72,building:'Station 2 Block'}),
+              ],{x:56,y:64,building:'Station 2 Block'}),
+            ],{x:54,y:56,building:'Station 2 Block'}),
+          ],{x:70,y:28,building:'Station 2 Block'}),
+          node('swg-1b','swg','SWG 1b','Station 3 + 4','swg','bg-swg','ok','SN-SWG-002','2.1 MW',null,[{k:'Rating',v:'3.5 MVA'}],[],{x:82,y:20,building:'CSS Building'}),
+          node('aux-tx','css','CSS Aux TX','Auxiliary transformer','tx','bg-css','ok','SN-AUXTX-001',null,null,[{k:'Rating',v:'500 kVA'}],[],{x:22,y:20,building:'CSS Building'}),
+        ],{x:52,y:14,building:'CSS Building'}),
+      ],{x:10,y:14,building:'Grid Connection'}),
+    ],{x:52,y:6,building:'Site'}),
+  ]);
+}
+
+function alphaTree(){
+  return node('ap-plant','plant','Alpha Fields','String inverter site - 3 MW','plant','bg-plant','warn',null,'2.8 MW',null,
+    [{k:'Capacity',v:'3 MW'},{k:'Commissioned',v:'Mar 2022'},{k:'Inverter type',v:'String'}],[
+    node('ap-dno','dno','DNO','Western Power Distribution','dno','bg-dno','ok','SN-DNO-WPD-01',null,null,
+      [{k:'Licence',v:'WPD-8821'},{k:'Voltage',v:'33 kV'}],[
+      node('ap-css','css','CSS Main','Central Switching Station','css','bg-css','warn','SN-CSS-AF-001','2.8 MW',null,
+        [{k:'Rating',v:'3 MVA'}],[
+        node('ap-swg1','swg','SWG Alpha 1','String inverter group','swg','bg-swg','ok','SN-ASWG-01','1.4 MW',null,
+          [{k:'Rating',v:'2 MVA'}],[
+          node('ap-tx1','tx','Alpha TX 1','String TX','tx','bg-tx','ok','SN-ATX-01','700 kW',null,
+            [{k:'Rating',v:'1 MVA'}],[
+            node('ap-inv1','inv','String Inv A1','String - SCB linked','inv','bg-inv','ok','SN-AI-001','350 kW','String',
+              [{k:'Output',v:'350 kW'},{k:'Temp',v:'41°C'}],[
+              node('ap-scb1','scb','SCB A1','4 strings · 175 kW','scb','bg-scb','ok','SN-SCB-A1','175 kW',null,
+                [{k:'Strings',v:'4'}],[
+                node('ap-str1','str','String 1','18 × 280W','str','bg-str','ok','STR-A1-001','5.04 kW',null,[{k:'Panels',v:'18 × 280W'}],[],{x:30,y:58,building:'Array Block A'}),
+                node('ap-str2','str','String 2','18 × 280W','str','bg-str','ok','STR-A1-002','5.04 kW',null,[{k:'Panels',v:'18 × 280W'}],[],{x:44,y:58,building:'Array Block A'}),
+              ],{x:36,y:50,building:'Array Block A'}),
+              node('ap-scb2','scb','SCB A2','4 strings · 175 kW','scb','bg-scb','ok','SN-SCB-A2','175 kW',null,[{k:'Strings',v:'4'}],[],{x:58,y:50,building:'Array Block A'}),
+            ],{x:46,y:42,building:'Inverter House A'}),
+            node('ap-inv2','inv','String Inv A2','FAULT - offline','inv','bg-inv','fault','SN-AI-002','0 kW','String',
+              [{k:'Status',v:'FAULT - offline'}],[
+              node('ap-scb3','scb','SCB A3','0 kW - offline','scb','bg-scb','fault','SN-SCB-A3','0 kW',null,[{k:'Strings',v:'4'}],[],{x:74,y:50,building:'Array Block A'}),
+            ],{x:70,y:42,building:'Inverter House A'}),
+          ],{x:58,y:32,building:'Inverter House A'}),
+        ],{x:36,y:22,building:'CSS / Switch Room'}),
+        node('ap-swg2','swg','SWG Alpha 2','String inverter group','swg','bg-swg','warn','SN-ASWG-02','1.4 MW',null,
+          [{k:'Rating',v:'2 MVA'}],[
+          node('ap-tx2','tx','Alpha TX 2','String TX','tx','bg-tx','warn','SN-ATX-02','680 kW',null,
+            [{k:'Rating',v:'1 MVA'},{k:'Note',v:'Low output warning'}],[
+            node('ap-inv3','inv','String Inv B1','340 kW','inv','bg-inv','ok','SN-AI-003','340 kW','String',
+              [{k:'Output',v:'340 kW'}],[
+              node('ap-scb4','scb','SCB B1','4 strings · 170 kW','scb','bg-scb','ok','SN-SCB-B1','170 kW',null,[{k:'Strings',v:'4'}],[],{x:30,y:78,building:'Array Block B'}),
+              node('ap-scb5','scb','SCB B2','4 strings · 170 kW','scb','bg-scb','ok','SN-SCB-B2','170 kW',null,[{k:'Strings',v:'4'}],[],{x:46,y:78,building:'Array Block B'}),
+            ],{x:38,y:68,building:'Inverter House B'}),
+            node('ap-inv4','inv','String Inv B2','Warning - low output','inv','bg-inv','warn','SN-AI-004','340 kW','String',
+              [{k:'Output',v:'340 kW'},{k:'Temp',v:'52°C ⚠'}],[
+              node('ap-scb6','scb','SCB B3','4 strings · 170 kW','scb','bg-scb','warn','SN-SCB-B3','170 kW',null,[{k:'Strings',v:'4'}],[],{x:64,y:78,building:'Array Block B'}),
+            ],{x:62,y:68,building:'Inverter House B'}),
+          ],{x:50,y:58,building:'Inverter House B'}),
+        ],{x:72,y:22,building:'CSS / Switch Room'}),
+      ],{x:54,y:12,building:'CSS / Switch Room'}),
+    ],{x:10,y:12,building:'Grid Connection'}),
+  ]);
+}
+
+// ═══════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════
+let currentPlant = 'priors';
+let selectedId = null;
+let expanded = new Set(['plant-1','dno-1','css-1','ap-plant','ap-dno','ap-css']);
+let activeTab = 'overview';
+
+// ═══════════════════════════════════════
+// PLANT SWITCH
+// ═══════════════════════════════════════
+function switchPlant(id){
+  currentPlant = id;
+  selectedId = null;
+  const p = PLANTS[id];
+  document.getElementById('hdr-output').textContent = p.output;
+  document.getElementById('hdr-tickets').textContent = p.tickets;
+  renderTree();
+  document.getElementById('main-content').innerHTML = '<div class="text-center text-muted mt-5" style="font-size:13px">Select a node to view details</div>';
+  document.getElementById('detail-title').textContent = 'Select an asset';
+  document.getElementById('detail-sub').textContent = 'Click any node';
+  document.getElementById('detail-body').innerHTML = '<div class="text-center text-muted mt-4" style="font-size:12px">No asset selected</div>';
+  showToast('Switched to '+p.name,'ok');
+}
+
+// ═══════════════════════════════════════
+// TREE
+// ═══════════════════════════════════════
+function renderTree(){
+  const root = document.getElementById('tree-root');
+  root.innerHTML = '';
+  const tree = PLANTS[currentPlant].tree;
+  renderNodes([tree], root, 0);
+  updateAssetCount();
+}
+
+function renderNodes(nodes, container, depth){
+  nodes.forEach(nd => {
+    const wrap = document.createElement('div');
+    const hasChildren = nd.children && nd.children.length > 0;
+    const isExpanded = expanded.has(nd.id);
+    const isSelected = selectedId === nd.id;
+    const statusCls = nd.status==='fault'?'status-fault':nd.status==='warn'?'status-warn':'status-ok';
+    const canAddChild = (CHILD_TYPES[nd.type]||[]).length > 0;
+
+    const row = document.createElement('div');
+    row.className = `tree-row${isSelected?' active':''}`;
+    row.style.paddingLeft = `${12+depth*14}px`;
+
+    const toggle = document.createElement('div');
+    toggle.className = `tree-toggle${hasChildren?(isExpanded?' open':''):' leaf'}`;
+    toggle.innerHTML = '&#8250;';
+
+    const icon = document.createElement('div');
+    icon.className = `tree-icon ${nd.bg}`;
+    icon.innerHTML = I[nd.iconKey]||I.panel;
+
+    const label = document.createElement('div');
+    label.className = 'tree-label';
+    label.textContent = nd.label;
+
+    const dot = document.createElement('div');
+    dot.className = `tree-status ${statusCls}`;
+
+    const addBtn = document.createElement('div');
+    addBtn.className = 'tree-add';
+    addBtn.style.display = canAddChild ? '' : 'none';
+    addBtn.title = 'Add child equipment';
+    addBtn.innerHTML = I.plus;
+
+    // Tooltip - shows on hover via CSS, contains full label + serial
+    const tt = document.createElement('div');
+    tt.className = 'tt';
+    const snLine = nd.serial
+      ? `<div style="color:#c4b5fd;font-family:monospace;font-size:10px;margin-top:2px">&#9636; ${nd.serial}</div>`
+      : (SERIAL_REQUIRED_TYPES.has(nd.type) ? `<div style="color:#fca5a5;font-size:10px;margin-top:2px">⚠ No serial assigned</div>` : '');
+    const statusLine = nd.status==='fault'
+      ? `<div style="color:#fca5a5;font-size:10px;margin-top:2px">● FAULT</div>`
+      : nd.status==='warn'
+      ? `<div style="color:#fde047;font-size:10px;margin-top:2px">● Warning</div>`
+      : `<div style="color:#86efac;font-size:10px;margin-top:2px">● Operational</div>`;
+    tt.innerHTML = `<div style="font-weight:600;margin-bottom:2px">${nd.label}</div><div style="color:#94a3b8;font-size:10px">${nd.sub}</div>${snLine}${statusLine}`;
+
+    row.append(toggle, icon, label, dot, addBtn, tt);
+    wrap.appendChild(row);
+
+    if(hasChildren){
+      const childWrap = document.createElement('div');
+      childWrap.className = `tree-children${isExpanded?' open':''}`;
+      renderNodes(nd.children, childWrap, depth+1);
+      wrap.appendChild(childWrap);
+      toggle.addEventListener('click', e => {
+        e.stopPropagation();
+        expanded.has(nd.id)?expanded.delete(nd.id):expanded.add(nd.id);
+        renderTree();
+      });
+    }
+    row.addEventListener('click', () => selectNode(nd));
+    addBtn.addEventListener('click', e => { e.stopPropagation(); openAddChildModal(nd); });
+    container.appendChild(wrap);
+  });
+}
+
+function updateAssetCount(){
+  let count = 0;
+  function walk(n){ count++; (n.children||[]).forEach(walk); }
+  walk(PLANTS[currentPlant].tree);
+  const el = document.getElementById('hdr-assets');
+  if(el) el.textContent = count;
+}
+
+// ═══════════════════════════════════════
+// SELECT
+// ═══════════════════════════════════════
+function selectNode(nd){
+  selectedId = nd.id;
+  activeTab = 'overview';
+  historyPage = 1; // Reset history pagination when selecting a new node
+  renderTree();
+  renderMain(nd);
+  renderDetail(nd);
+}
+window.selectById = id => { const n = findNode(PLANTS[currentPlant].tree, id); if(n) selectNode(n); };
+
+// ═══════════════════════════════════════
+// MAIN PANEL
+// ═══════════════════════════════════════
+function renderMain(nd){
+  const el = document.getElementById('main-content');
+  const trail = getTrail(PLANTS[currentPlant].tree, nd.id);
+
+  const bc = trail.map((n,i) => i===trail.length-1
+    ? `<li class="breadcrumb-item active">${n.label}</li>`
+    : `<li class="breadcrumb-item"><a onclick="selectById('${n.id}')">${n.label}</a></li>`
+  ).join('');
+
+  const statusTag = nd.status==='ok'
+    ? `<span class="tag tag-ok">${I.check} Operational</span>`
+    : nd.status==='warn'
+    ? `<span class="tag tag-warn">${I.alert} Warning</span>`
+    : `<span class="tag tag-fault">${I.alert} Fault</span>`;
+
+  // Serial number display - prominent in header
+  const snHtml = (() => {
+    if(!SERIAL_REQUIRED_TYPES.has(nd.type) && !SERIAL_OPTIONAL_TYPES.has(nd.type)) return '';
+    if(nd.serial){
+      return `<div class="sn-box">
+        <span style="color:#7c3aed">${I.serial}</span>
+        <span class="sn-label">Serial no.</span>
+        <span class="sn-val">${nd.serial}</span>
+        <button class="sn-edit-btn" onclick="openSnModal('${nd.id}')">${I.edit} Edit</button>
+      </div>`;
+    } else {
+      return `<div class="sn-box" style="border-color:#fed7aa;background:#fff7ed">
+        <span style="color:#c2410c">${I.alert}</span>
+        <span class="sn-label" style="color:#c2410c">Serial no.</span>
+        <span class="sn-missing">Not assigned - required for physical equipment</span>
+        <button class="sn-edit-btn" style="border-color:#fed7aa;color:#c2410c" onclick="openSnModal('${nd.id}')">Assign SN</button>
+      </div>`;
+    }
+  })();
+
+  const faultBanner = nd.status==='fault'
+    ? `<div class="fault-banner fb-fault"><span style="color:var(--fault)">${I.alert}</span><div><div style="font-size:12px;font-weight:600;color:#991b1b">Fault detected - ${nd.label}</div><div style="font-size:11px;color:#b91c1c;margin-top:2px">This equipment is offline or has reported a critical issue. Immediate action required.</div></div></div>`
+    : nd.status==='warn'
+    ? `<div class="fault-banner fb-warn"><span style="color:var(--warn)">${I.alert}</span><div><div style="font-size:12px;font-weight:600;color:#92400e">Warning - ${nd.label}</div><div style="font-size:11px;color:#a16207;margin-top:2px">Performance issue detected. Schedule inspection.</div></div></div>`
+    : '';
+
+  const kpis = [
+    {lbl:'Output',val:nd.output||'-',bar:nd.status==='fault'?'var(--fault)':nd.status==='warn'?'var(--warn)':'var(--ok)',delta:'Last 24h average',dc:'text-muted'},
+    {lbl:'Availability',val:nd.status==='fault'?'0%':nd.status==='warn'?'87%':'98%',bar:nd.status==='fault'?'var(--fault)':nd.status==='warn'?'var(--warn)':'var(--blue)',delta:nd.status==='fault'?'⚠ Offline':nd.status==='warn'?'Below target':'On target',dc:nd.status==='fault'?'text-danger':nd.status==='warn'?'text-warning':'text-success'},
+    {lbl:'Open tasks',val:nd.status==='fault'?'2':nd.status==='warn'?'1':'0',bar:nd.status!='ok'?'var(--fault)':'var(--ok)',delta:'Active tickets',dc:nd.status!='ok'?'text-danger':'text-muted'},
+    {lbl:'Sub-assets',val:String(countDesc(nd)),bar:'#7c3aed',delta:LEVEL_LABELS[nd.type]||nd.type,dc:'text-muted'},
+  ];
+
+  const hasChildren = nd.children && nd.children.length > 0;
+  const canAdd = (CHILD_TYPES[nd.type]||[]).length > 0;
+
+  const childrenHtml = (hasChildren || canAdd) ? `
+    <div class="sec">Direct children</div>
+    <div class="child-grid mb-3">
+      ${(nd.children||[]).map(c => {
+        const bar = LEVEL_BAR[c.type]||'#94a3b8';
+        const sdot = c.status==='fault'?'var(--fault)':c.status==='warn'?'var(--warn)':'var(--ok)';
+        const slbl = c.status==='fault'?'Fault':c.status==='warn'?'Warning':'Operational';
+        const snDisplay = c.serial ? `<div class="child-sn">&#9636; ${c.serial}</div>` : (SERIAL_REQUIRED_TYPES.has(c.type)?'<div class="child-sn" style="color:#c2410c">&#9632; NO SERIAL</div>':'');
+        return `<div class="child-card${c.status==='fault'?' is-fault':c.status==='warn'?' is-warn':''}" onclick="selectById('${c.id}')">
+          <div class="child-lbar" style="background:${bar}"></div>
+          <div class="child-name">${c.label}</div>
+          ${snDisplay}
+          <div class="child-sub">${c.sub}</div>
+          <div class="child-stats">
+            <div class="child-stat"><div class="child-stat-dot" style="background:${sdot}"></div>${slbl}</div>
+            ${c.output?`<div class="child-stat">${c.output}</div>`:''}
+          </div>
+        </div>`;
+      }).join('')}
+      ${canAdd ? `<div class="add-child-card" onclick="openAddChildModal_byId('${nd.id}')" title="Add child equipment">
+        <span style="width:32px;height:32px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center">${I.plus}</span>
+        <span>Add equipment</span>
+        <span style="font-size:10px;color:#cbd5e1">${(CHILD_TYPES[nd.type]||[]).map(t=>t.label).join(' / ')}</span>
+      </div>` : ''}
+    </div>` : '';
+
+  const spark1 = Array.from({length:24},(_,i)=>nd.status==='fault'?0:75+Math.random()*25*Math.sin(i/4)+Math.random()*10);
+  const spark2 = Array.from({length:24},()=>38+Math.random()*10);
+
+  const overviewHtml = `${childrenHtml}
+    <div class="sec">Telemetry - last 24h</div>
+    <div class="row g-3 mb-3">
+      <div class="col-6"><div class="spark-card">
+        <div class="spark-title">Power output</div>
+        <div class="spark-val">${nd.output ? (() => { const [val, ...unit] = nd.output.split(' '); return `${val} <span class="spark-unit">${unit.join(' ') || 'kW'}</span>`; })() : '-'}</div>
+        ${buildSparkline(spark1,nd.status==='fault'?'#dc2626':nd.status==='warn'?'#ca8a04':'#16a34a')}
+      </div></div>
+      <div class="col-6"><div class="spark-card">
+        <div class="spark-title">Temperature</div>
+        <div class="spark-val">46 <span class="spark-unit">°C</span></div>
+        ${buildSparkline(spark2,'#ca8a04')}
+      </div></div>
+    </div>`;
+
+  const actHtml = getActivityFor(nd).map(a=>`
+    <div class="act-item">
+      <div class="act-icon" style="background:${a.ibg}">${a.icon}</div>
+      <div class="act-body"><div class="act-text">${a.text}</div><div class="act-meta">${a.time} · ${a.by||'System'}</div></div>
+    </div>`).join('');
+
+  const tabs = [
+    ['overview','Overview'],['activity','Activity'],['history','History'],['map','Map']
+  ].map(([k,lbl])=>`<button class="tab-btn${activeTab===k?' active':''}" onclick="switchTab('${k}',this)">${lbl}</button>`).join('');
+
+  el.innerHTML = `
+    <nav><ol class="breadcrumb bc">${bc}</ol></nav>
+    ${faultBanner}
+    <div style="margin-bottom:14px">
+      <div class="page-title">${nd.label}</div>
+      <div class="page-tags">
+        <span class="tag tag-level">${LEVEL_LABELS[nd.type]||nd.type}</span>
+        ${statusTag}
+        ${nd.invType?`<span class="tag tag-info">${nd.invType} inverter</span>`:''}
+      </div>
+    </div>
+    ${snHtml}
+    <div class="kpi-grid mb-3">${kpis.map(k=>`
+      <div class="kpi-card"><div class="bar" style="background:${k.bar}"></div>
+        <div class="kpi-lbl">${k.lbl}</div>
+        <div class="kpi-val">${k.val}</div>
+        <div class="kpi-delta ${k.dc}">${k.delta}</div>
+      </div>`).join('')}</div>
+    <div class="tab-nav">${tabs}</div>
+    <div id="tab-overview" class="tab-pane${activeTab==='overview'?' active':''}">${overviewHtml}</div>
+    <div id="tab-activity" class="tab-pane${activeTab==='activity'?' active':''}">
+      <div class="sec">Activity log</div>${actHtml}</div>
+    <div id="tab-history" class="tab-pane${activeTab==='history'?' active':''}">
+      ${buildHistoryTab(nd)}</div>
+    <div id="tab-map" class="tab-pane${activeTab==='map'?' active':''}">
+      ${buildMapTab(nd)}</div>
+  `;
+
+  // init map after DOM injection
+  if(activeTab==='map') initMap(nd);
+}
+
+function switchTab(key,btn){
+  activeTab = key;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  const pane=document.getElementById('tab-'+key);
+  if(pane) pane.classList.add('active');
+  if(key==='map'){
+    const nd = findNode(PLANTS[currentPlant].tree, selectedId);
+    if(nd) initMap(nd);
+  }
+}
+
+function buildSparkline(data,color){
+  const w=300,h=52,mn=Math.min(...data),mx=Math.max(...data);
+  const pts=data.map((v,i)=>`${(i/(data.length-1))*w},${h-((v-mn)/(mx-mn+.001))*h}`).join(' ');
+  const area=`0,${h} ${pts} ${w},${h}`;
+  const gid='g'+Math.random().toString(36).slice(2);
+  return `<svg class="spark-svg" viewBox="0 0 ${w} ${h}" style="height:52px;margin-top:6px">
+    <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="${color}" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+    </linearGradient></defs>
+    <polygon points="${area}" fill="url(#${gid})"/>
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+}
+
+// ═══════════════════════════════════════
+// DETAIL PANEL
+// ═══════════════════════════════════════
+function renderDetail(nd){
+  document.getElementById('detail-title').textContent = nd.label;
+  document.getElementById('detail-sub').textContent = nd.sub;
+
+  const trail = getTrail(PLANTS[currentPlant].tree, nd.id);
+
+  // ── Compact horizontal hierarchy path ──
+  // Wraps naturally: each step = coloured dot + short label, separated by › chevrons
+  const hierDiagram = `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:2px;padding:6px 8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:12px">
+    ${trail.map((n, i) => {
+      const isCur = n.id === nd.id;
+      const lc = LEVEL_COLORS[n.type] || '#94a3b8';
+      const sdot = n.status==='fault'?'#dc2626':n.status==='warn'?'#ca8a04':'#16a34a';
+      const sep = i > 0 ? `<span style="color:#cbd5e1;font-size:11px;padding:0 1px">›</span>` : '';
+      return `${sep}<span style="display:inline-flex;align-items:center;gap:4px;${isCur?`background:${lc}12;border:1px solid ${lc}40;border-radius:5px;padding:1px 5px`:'padding:1px 2px'}">
+        <span style="width:5px;height:5px;border-radius:50%;background:${sdot};flex-shrink:0;display:inline-block"></span>
+        <span style="font-size:11px;font-weight:${isCur?'600':'400'};color:${isCur?lc:'#64748b'};cursor:${isCur?'default':'pointer'};white-space:nowrap"
+          ${!isCur?`onclick="selectById('${n.id}')"`:''}>
+          ${n.label}
+        </span>
+      </span>`;
+    }).join('')}
+  </div>`;
+
+  const attrsHtml = (nd.attrs||[]).map(a=>`
+    <div class="d-kv"><span class="d-k">${a.k}</span><span class="d-v">${a.v}</span></div>`).join('');
+
+  const canManipulate = ['swg','sswg','tx','inv','inv-unit','scb','str','panel'].includes(nd.type);
+  const canAdd = (CHILD_TYPES[nd.type]||[]).length > 0;
+
+  // ── Grouped actions ──
+  // Group 1: primary (always shown)
+  // Group 2: equipment management (add, serial) - if applicable
+  // Group 3: physical operations (replace/swap in a row, move/detach in a row)
+  // Group 4: fault (only if faulted)
+
+  const group1 = `<div class="act-group">
+    <div class="act-row">
+      <button class="act-btn primary" onclick="openModal('ticket','${nd.id}')">${I.ticket} Ticket</button>
+      <button class="act-btn" onclick="openModal('logs','${nd.id}')">${I.log} Logs</button>
+    </div>
+  </div>`;
+
+  const group2 = (canAdd || SERIAL_REQUIRED_TYPES.has(nd.type) || SERIAL_OPTIONAL_TYPES.has(nd.type)) ? `<div class="act-group">
+    <div class="act-group-label">Equipment</div>
+    <div class="act-row">
+      ${canAdd ? `<button class="act-btn add" onclick="openAddChildModal_byId('${nd.id}')">${I.plus} Add child</button>` : ''}
+      ${(SERIAL_REQUIRED_TYPES.has(nd.type)||SERIAL_OPTIONAL_TYPES.has(nd.type)) ? `<button class="act-btn" onclick="openSnModal('${nd.id}')" style="color:#7c3aed;border-color:#ddd6fe;background:#faf5ff">${I.serial} ${nd.serial?'Update SN':'Assign SN'}</button>` : ''}
+    </div>
+  </div>` : '';
+
+  const group3 = canManipulate ? `<div class="act-group">
+    <div class="act-group-label">Physical operations</div>
+    <div class="act-row" style="margin-bottom:5px">
+      <button class="act-btn" onclick="openModal('replace','${nd.id}')">${I.replace} Replace</button>
+      <button class="act-btn" onclick="openModal('swap','${nd.id}')">${I.swap} Swap</button>
+    </div>
+    <div class="act-row">
+      <button class="act-btn warn" onclick="openModal('move','${nd.id}')">${I.move} Move plant</button>
+      <button class="act-btn danger" onclick="openModal('detach','${nd.id}')">${I.detach} Detach</button>
+    </div>
+  </div>` : '';
+
+  const group4 = nd.status==='fault' ? `<div class="act-group">
+    <div class="act-group-label">Fault</div>
+    <button class="act-btn danger full" onclick="openModal('ack','${nd.id}')">${I.alert} Acknowledge fault</button>
+  </div>` : '';
+
+  document.getElementById('detail-body').innerHTML = `
+    <div class="d-sec" style="margin-bottom:6px">Location</div>
+    ${hierDiagram}
+    <div class="d-sec">Properties</div>
+    <div class="d-kv"><span class="d-k">Level</span><span class="d-v" style="color:${LEVEL_COLORS[nd.type]||'#94a3b8'}">${LEVEL_LABELS[nd.type]||nd.type}</span></div>
+    <div class="d-kv"><span class="d-k">Status</span>
+      <span class="d-v" style="color:${nd.status==='ok'?'var(--ok)':nd.status==='warn'?'var(--warn)':'var(--fault)'}">${nd.status==='ok'?'Operational':nd.status==='warn'?'Warning':'FAULT'}</span></div>
+    ${nd.invType?`<div class="d-kv"><span class="d-k">Inverter type</span><span class="d-v">${nd.invType}</span></div>`:''}
+    ${attrsHtml}
+
+    <div class="d-sec" style="margin-top:14px">Actions</div>
+    ${group1}${group2}${group3}${group4}
+  `;
+}
+
+// ═══════════════════════════════════════
+// ADD CHILD MODAL
+// ═══════════════════════════════════════
+let addChildParentId = null;
+let addChildSelectedType = null;
+let addChildStep = 1; // 1 = pick type, 2 = enter details
+
+window.openAddChildModal_byId = id => {
+  const nd = findNode(PLANTS[currentPlant].tree, id);
+  if(nd) openAddChildModal(nd);
+};
+
+function openAddChildModal(parentNd){
+  addChildParentId = parentNd.id;
+  addChildSelectedType = null;
+  addChildStep = 1;
+  renderAddChildModal(parentNd);
+  document.getElementById('modal').classList.add('open');
+}
+
+function renderAddChildModal(parentNd){
+  if(!parentNd) parentNd = findNode(PLANTS[currentPlant].tree, addChildParentId);
+  const allowed = CHILD_TYPES[parentNd.type] || [];
+
+  document.getElementById('modal-icon').innerHTML = `<div style="background:#ede9fe;color:#7c3aed">${I.plus}</div>`;
+  document.getElementById('modal-icon').firstChild.style.cssText='width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center';
+  document.getElementById('modal-icon').firstChild.querySelector('svg').style='width:18px;height:18px';
+  document.getElementById('modal-title').textContent = `Add equipment to ${parentNd.label}`;
+  document.getElementById('modal-sub').textContent = addChildStep===1
+    ? 'Select the type of equipment to add as a child of this node.'
+    : 'Enter the details for the new equipment.';
+
+  if(addChildStep===1){
+    const opts = allowed.map(t=>`
+      <div class="ct-option${addChildSelectedType===t.type?' selected':''}" onclick="selectChildType('${t.type}')">
+        <div class="ct-icon ${t.bg}">${I[t.icon]||I.panel}</div>
+        <div><div class="ct-name">${t.label}</div><div class="ct-level">${t.level}</div></div>
+      </div>`).join('');
+
+    document.getElementById('modal-body').innerHTML = `
+      <div class="step-row">
+        <div class="step active">1 · Choose type</div>
+        <div class="step">2 · Enter details</div>
+      </div>
+      <div class="child-type-grid">${opts}</div>
+    `;
+    document.getElementById('modal-actions').innerHTML = `
+      <button class="mbtn mbtn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="mbtn mbtn-purple" onclick="goToAddChildStep2()" id="next-btn" ${!addChildSelectedType?'disabled style="opacity:.5"':''}>Next →</button>
+    `;
+  } else {
+    const typeDef = allowed.find(t=>t.type===addChildSelectedType);
+    const snRequired = typeDef && typeDef.serialRequired;
+    document.getElementById('modal-body').innerHTML = `
+      <div class="step-row">
+        <div class="step done">1 · Choose type</div>
+        <div class="step active">2 · Enter details</div>
+      </div>
+      <div class="mf">
+        <label>Equipment name / label</label>
+        <input id="add-name" type="text" placeholder="e.g. Inverter 2.3"/>
+      </div>
+      <div class="mf">
+        <label>Serial number ${snRequired?'<span style="color:#dc2626">*</span>':'(optional)'}</label>
+        <input id="add-serial" type="text" placeholder="${snRequired?'Required for this equipment type - e.g. SN-99001':'e.g. STR-001 (optional)'}"/>
+        ${snRequired?'<div class="sn-required">⚠ Serial number is required for physical equipment (switchgear, transformers, inverters, combiners)</div>':'<div class="hint">Serial number is optional for strings and panels</div>'}
+      </div>
+      <div class="mf">
+        <label>Output capacity</label>
+        <input id="add-output" type="text" placeholder="e.g. 350 kW"/>
+      </div>
+      ${addChildSelectedType==='inv'?`<div class="mf">
+        <label>Inverter type</label>
+        <select id="add-invtype"><option value="String">String</option><option value="Pool">Pool</option><option value="Central">Central</option></select>
+      </div>`:''}
+      <div class="mf">
+        <label>Notes</label>
+        <input id="add-notes" type="text" placeholder="Optional description"/>
+      </div>
+    `;
+    document.getElementById('modal-actions').innerHTML = `
+      <button class="mbtn mbtn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="mbtn mbtn-cancel" onclick="backToStep1()">← Back</button>
+      <button class="mbtn mbtn-purple" onclick="confirmAddChild()">Add equipment</button>
+    `;
+  }
+}
+
+window.selectChildType = type => {
+  addChildSelectedType = type;
+  const parentNd = findNode(PLANTS[currentPlant].tree, addChildParentId);
+  renderAddChildModal(parentNd);
+};
+
+function goToAddChildStep2(){
+  if(!addChildSelectedType) return;
+  addChildStep = 2;
+  const parentNd = findNode(PLANTS[currentPlant].tree, addChildParentId);
+  renderAddChildModal(parentNd);
+}
+
+function backToStep1(){
+  addChildStep = 1;
+  const parentNd = findNode(PLANTS[currentPlant].tree, addChildParentId);
+  renderAddChildModal(parentNd);
+}
+
+function confirmAddChild(){
+  const parentNd = findNode(PLANTS[currentPlant].tree, addChildParentId);
+  if(!parentNd) return;
+  const typeDef = (CHILD_TYPES[parentNd.type]||[]).find(t=>t.type===addChildSelectedType);
+  if(!typeDef) return;
+
+  const nameEl = document.getElementById('add-name');
+  const snEl = document.getElementById('add-serial');
+  const outputEl = document.getElementById('add-output');
+  const invTypeEl = document.getElementById('add-invtype');
+
+  const name = nameEl&&nameEl.value.trim()||typeDef.label+' (new)';
+  const serial = snEl&&snEl.value.trim()||null;
+  const output = outputEl&&outputEl.value.trim()||null;
+  const invType = invTypeEl?invTypeEl.value:null;
+
+  if(typeDef.serialRequired && !serial){
+    if(snEl) { snEl.style.borderColor='#dc2626'; snEl.focus(); }
+    showToast('Serial number is required for '+typeDef.label,'fault');
+    return;
+  }
+
+  const newNode = node(
+    mkId(), addChildSelectedType, name,
+    serial?serial:'New '+typeDef.label,
+    typeDef.icon, typeDef.bg, 'ok',
+    serial||null, output||null, invType,
+    serial?[{k:'Serial',v:serial}]:[],
+    []
+  );
+
+  parentNd.children = parentNd.children || [];
+  parentNd.children.push(newNode);
+  expanded.add(parentNd.id);
+  expanded.add(newNode.id);
+
+  closeModal();
+  renderTree();
+  selectNode(newNode);
+  showToast(`${name} added successfully`+(serial?` (SN: ${serial})`:''),'purple');
+}
+
+// ═══════════════════════════════════════
+// SERIAL NUMBER MODAL
+// ═══════════════════════════════════════
+window.openSnModal = id => {
+  const nd = findNode(PLANTS[currentPlant].tree, id);
+  if(!nd) return;
+  const isRequired = SERIAL_REQUIRED_TYPES.has(nd.type);
+
+  document.getElementById('modal-icon').innerHTML = `<div style="background:#faf5ff;color:#7c3aed;width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" style="width:18px;height:18px"><rect x="2" y="6" width="16" height="8" rx="2"/><path d="M5 10h2M9 10h2M13 10h2"/></svg></div>`;
+  document.getElementById('modal-title').textContent = nd.serial ? 'Update serial number' : 'Assign serial number';
+  document.getElementById('modal-sub').textContent = `${nd.label} - ${LEVEL_LABELS[nd.type]||nd.type}${isRequired?' Serial number is mandatory for this equipment type.':''}`;
+  document.getElementById('modal-body').innerHTML = `
+    <div class="mf">
+      <label>Serial number ${isRequired?'<span style="color:#dc2626">*</span>':''}</label>
+      <input id="sn-input" type="text" value="${nd.serial||''}" placeholder="e.g. SN-99001"/>
+      <div class="hint">Use the manufacturer's serial number exactly as printed on the unit nameplate.</div>
+    </div>
+    <div class="mf">
+      <label>Reason for change</label>
+      <select id="sn-reason">
+        <option value="initial">${nd.serial?'Correction / typo fix':'Initial assignment'}</option>
+        <option value="replacement">Unit replaced - new serial</option>
+        <option value="audit">Audit verification</option>
+      </select>
+    </div>
+    <div class="mf">
+      <label>Notes</label>
+      <input id="sn-notes" type="text" placeholder="Optional - e.g. verified against nameplate photo"/>
+    </div>
+  `;
+  document.getElementById('modal-actions').innerHTML = `
+    <button class="mbtn mbtn-cancel" onclick="closeModal()">Cancel</button>
+    <button class="mbtn mbtn-purple" onclick="confirmSnUpdate('${id}')">Save serial number</button>
+  `;
+  document.getElementById('modal').classList.add('open');
+};
+
+window.confirmSnUpdate = id => {
+  const nd = findNode(PLANTS[currentPlant].tree, id);
+  if(!nd) return;
+  const val = document.getElementById('sn-input').value.trim();
+  if(SERIAL_REQUIRED_TYPES.has(nd.type)&&!val){
+    document.getElementById('sn-input').style.borderColor='#dc2626';
+    showToast('Serial number is required for this equipment','fault'); return;
+  }
+  nd.serial = val||null;
+  closeModal();
+  renderTree();
+  if(selectedId===id){ renderMain(nd); renderDetail(nd); }
+  showToast(val?`Serial number updated: ${val}`:'Serial number cleared','purple');
+};
+
+// ═══════════════════════════════════════
+// GENERIC MODALS
+// ═══════════════════════════════════════
+const MODALS = {
+  ticket:{title:'Create corrective ticket',sub:'Log a fault or corrective maintenance task.',icon:'ticket',iconBg:'#e6f4ee',iconColor:' var(--accent)',
+    body:`<div class="mf"><label>Task name</label><input type="text" placeholder="e.g. Trip fault investigation"/></div>
+    <div class="mf"><label>Priority</label><select><option>High</option><option>Medium</option><option>Low</option></select></div>
+    <div class="mf"><label>Assigned to</label><select><option>J. Patel</option><option>A. Singh</option><option>M. Jones</option></select></div>
+    <div class="mf"><label>Description</label><textarea rows="3" placeholder="Describe the issue..."></textarea></div>`,
+    okText:'Create ticket',okCls:'mbtn-ok',toast:'Corrective ticket created',toastType:'ok'},
+  replace:{title:'Replace equipment',sub:'Mark this unit as replaced with a new serial-tracked asset. A new serial number is required.',icon:'replace',iconBg:'#ede9fe',iconColor:'#7c3aed',
+    body:`<div class="mf"><label>New serial number <span style="color:#dc2626">*</span></label><input type="text" placeholder="e.g. SN-99001"/><div class="sn-required">⚠ New serial number required to complete replacement</div></div>
+    <div class="mf"><label>Replacement reason</label><select><option>End of life</option><option>Fault - irreparable</option><option>Upgrade</option></select></div>
+    <div class="mf"><label>Notes</label><textarea rows="2"></textarea></div>`,
+    okText:'Confirm replacement',okCls:'mbtn-ok',toast:'Equipment replaced - movement log updated',toastType:'ok'},
+  swap:{title:'Swap with spare',sub:'Temporarily swap this unit with a spare. Both serial numbers will be tracked.',icon:'swap',iconBg:'#eff6ff',iconColor:'var(--blue)',
+    body:`<div class="mf"><label>Select spare</label><select><option>SN-SPARE-001 (same model)</option><option>SN-SPARE-002 (compatible)</option></select></div>
+    <div class="mf"><label>Reason</label><select><option>Repair</option><option>Testing</option><option>Fault</option></select></div>
+    <div class="mf"><label>Repair / holding location</label><select><option>Alpha Spares depot</option><option>OEM repair centre</option><option>On-site store</option></select></div>`,
+    okText:'Confirm swap',okCls:'mbtn-ok',toast:'Swap logged - asset movement recorded',toastType:'ok'},
+  move:{title:'Move to another plant',sub:'Detach and reassign this equipment to a different plant. Serial number and history follow the asset.',icon:'move',iconBg:'#fef9c3',iconColor:'var(--warn)',
+    body:`<div class="mf"><label>Destination plant</label><select><option>Alpha Fields Solar Park</option><option>Priors Byne Solar Farm</option></select></div>
+    <div class="mf"><label>Target parent asset</label><select><option>Alpha TX 2 (L4)</option><option>Alpha TX 1 (L4)</option></select></div>
+    <div class="mf"><label>Reason</label><select><option>Site transfer</option><option>Redeployment</option><option>Upgrade</option></select></div>`,
+    okText:'Confirm move',okCls:'mbtn-warn',toast:'Asset moved - movement log updated',toastType:'warn'},
+  detach:{title:'Detach from parent',sub:'Remove this equipment from its parent. It remains in the asset pool with its serial number until re-attached.',icon:'detach',iconBg:'#fee2e2',iconColor:'var(--fault)',
+    body:`<div class="mf"><label>Reason</label><select><option>Repair</option><option>Inspection</option><option>Decommission</option></select></div>
+    <div class="mf"><label>Holding location</label><select><option>On-site spares store</option><option>Alpha Spares depot</option><option>OEM repair centre</option></select></div>
+    <div class="mf"><label>Notes</label><textarea rows="2"></textarea></div>`,
+    okText:'Detach',okCls:'mbtn-warn',toast:'Equipment detached - activity log updated',toastType:'warn'},
+  ack:{title:'Acknowledge fault',sub:'Confirm you have reviewed this fault and are taking action.',icon:'alert',iconBg:'#fee2e2',iconColor:'var(--fault)',
+    body:`<div class="mf"><label>Acknowledged by</label><select><option>J. Patel</option><option>A. Singh</option></select></div>
+    <div class="mf"><label>Action taken</label><textarea rows="2" placeholder="Describe immediate action..."></textarea></div>`,
+    okText:'Acknowledge',okCls:'mbtn-warn',toast:'Fault acknowledged',toastType:'warn'},
+  logs:{title:'Full activity log',sub:'All events for this equipment including cascaded sub-asset logs.',icon:'log',iconBg:'#eff6ff',iconColor:'var(--blue)',
+    body:`<div style="border:1px solid #e2e8f0;border-radius:8px;max-height:220px;overflow-y:auto;font-size:12px">
+      ${['8s ago · Telemetry synced · System','35m ago · Fault event logged - trip detected · System','2h ago · PM schedule checked · System','1d ago · Oil sample result logged · J. Patel','3d ago · Task #881 closed · A. Singh','5d ago · Serial number verified · Admin'].map(l=>{
+        const [t,...rest]=l.split(' · ');
+        return `<div style="padding:7px 10px;border-bottom:1px solid #f1f5f9;display:flex;gap:10px"><span style="color:#94a3b8;width:56px;flex-shrink:0">${t}</span><span style="color:#334155;flex:1">${rest[0]}</span><span style="color:#cbd5e1">${rest[1]||''}</span></div>`;
+      }).join('')}
+    </div>`,
+    okText:'Close',okCls:'mbtn-ok',toast:null},
+};
+
+let modalAction=null, modalNodeId=null;
+
+function openModal(action, nodeId){
+  modalAction=action; modalNodeId=nodeId;
+  const cfg=MODALS[action]; if(!cfg) return;
+  const iconSvg=I[cfg.icon]||I.info;
+  document.getElementById('modal-icon').innerHTML=`<div style="background:${cfg.iconBg};color:${cfg.iconColor};width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center">${iconSvg.replace('<svg','<svg style="width:18px;height:18px"')}</div>`;
+  document.getElementById('modal-title').textContent=cfg.title;
+  document.getElementById('modal-sub').textContent=cfg.sub;
+  document.getElementById('modal-body').innerHTML=cfg.body;
+  document.getElementById('modal-actions').innerHTML=`
+    <button class="mbtn mbtn-cancel" onclick="closeModal()">Cancel</button>
+    <button class="mbtn ${cfg.okCls}" onclick="confirmModal()">${cfg.okText}</button>
+  `;
+  document.getElementById('modal').classList.add('open');
+}
+
+function confirmModal(){
+  const cfg=MODALS[modalAction];
+  closeModal();
+  if(cfg&&cfg.toast) showToast(cfg.toast,cfg.toastType||'ok');
+}
+
+function maybeCloseModal(e){ if(e.target===document.getElementById('modal')) closeModal(); }
+function closeModal(){ document.getElementById('modal').classList.remove('open'); }
+
+// ═══════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════
+function showToast(msg,type='ok'){
+  const wrap=document.getElementById('toast-wrap');
+  const t=document.createElement('div');
+  t.className=`toast t-${type}`;
+  const ico={ok:I.check,warn:I.alert,fault:I.alert,purple:I.serial};
+  const col={ok:'var(--ok)',warn:'var(--warn)',fault:'var(--fault)',purple:'var(--purple)'};
+  t.innerHTML=`<span style="color:${col[type]||col.ok}">${ico[type]||I.check}</span><span>${msg}</span>`;
+  wrap.appendChild(t);
+  setTimeout(()=>{t.style.cssText='opacity:0;transform:translateY(10px);transition:.3s';setTimeout(()=>t.remove(),300);},3200);
+}
+
+// ═══════════════════════════════════════
+// TOOLTIP POSITIONING (fixed, clears columns)
+// ═══════════════════════════════════════
+document.addEventListener('mousemove', e => {
+  const row = e.target.closest('.tree-row');
+  if(!row) return;
+  const tt = row.querySelector('.tt');
+  if(!tt) return;
+  const sbRect = document.querySelector('.sidebar').getBoundingClientRect();
+  tt.style.left = (sbRect.right + 8) + 'px';
+  tt.style.top = e.clientY + 'px';
+});
+
+// ═══════════════════════════════════════
+// HISTORY TAB (maintenance + replace combined with pagination)
+// ═══════════════════════════════════════
+let historyPage = 1;
+const historyPerPage = 5;
+
+function buildHistoryTab(nd){
+  // Combine all history into one unified array
+  const allHistory = [];
+  
+  // Add maintenance records
+  getMaintenanceFor(nd).forEach(m => {
+    allHistory.push({
+      date: m.date,
+      title: m.title,
+      sub: m.sub,
+      badge: m.type,
+      badgeBg: m.bc,
+      badgeColor: m.tc,
+      category: 'Maintenance'
+    });
+  });
+  
+  // Add replacement records
+  getReplaceHist(nd).forEach(r => {
+    if(r.type !== 'none'){
+      allHistory.push({
+        date: r.date,
+        title: r.title,
+        sub: r.by,
+        badge: r.type === 'installed' ? 'Installed' : 'Replaced',
+        badgeBg: r.type === 'installed' ? '#dcfce7' : '#fee2e2',
+        badgeColor: r.type === 'installed' ? '#166534' : '#991b1b',
+        category: 'Serial'
+      });
+    }
+  });
+  
+  // Sort by date (newest first)
+  // Note: This is a simple sort for demo, real dates should be parsed properly
+  allHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
+  
+  const totalPages = Math.ceil(allHistory.length / historyPerPage);
+  const startIdx = (historyPage - 1) * historyPerPage;
+  const endIdx = startIdx + historyPerPage;
+  const pageHistory = allHistory.slice(startIdx, endIdx);
+  
+  const histHtml = pageHistory.map(h => `
+    <div class="hist-row">
+      <div class="hist-date">${h.date}</div>
+      <div class="hist-body">
+        <div class="hist-title">${h.title}</div>
+        <div class="hist-sub">${h.sub}</div>
+      </div>
+      <span class="hist-badge" style="background:${h.badgeBg};color:${h.badgeColor}" title="${h.category}">${h.badge}</span>
+    </div>`).join('');
+  
+  const paginationHtml = totalPages > 1 ? `
+    <div class="hist-pagination">
+      <div class="hist-page-info">Showing ${startIdx + 1}-${Math.min(endIdx, allHistory.length)} of ${allHistory.length} records</div>
+      <div class="hist-page-btns">
+        <button class="hist-page-btn" ${historyPage === 1 ? 'disabled' : ''} onclick="changeHistoryPage(${historyPage - 1})">&larr; Prev</button>
+        ${Array.from({length: totalPages}, (_, i) => i + 1).map(p => `
+          <button class="hist-page-btn ${p === historyPage ? 'active' : ''}" onclick="changeHistoryPage(${p})">${p}</button>
+        `).join('')}
+        <button class="hist-page-btn" ${historyPage === totalPages ? 'disabled' : ''} onclick="changeHistoryPage(${historyPage + 1})">Next &rarr;</button>
+      </div>
+    </div>` : '';
+  
+  return `
+    <div class="hist-section-head">${I.wrench} Activity History</div>
+    ${histHtml || '<div style="padding:20px;text-align:center;color:#94a3b8;font-size:11px">No history records found</div>'}
+    ${paginationHtml}`;
+}
+
+function changeHistoryPage(page){
+  historyPage = page;
+  const n = findNode(PLANTS[currentPlant].tree, selectedId);
+  if(n) selectNode(n);
+}
+
+// ═══════════════════════════════════════
+// MAP TAB
+// ═══════════════════════════════════════
+function buildMapTab(nd){
+  const allGeoNodes = [];
+  function walkGeo(n){ if(n.geo) allGeoNodes.push(n); (n.children||[]).forEach(walkGeo); }
+  walkGeo(PLANTS[currentPlant].tree);
+
+  if(!allGeoNodes.length){
+    return `<div class="map-wrap" style="height:420px"><div class="map-no-geo">
+      ${I.move}<span style="font-weight:500;color:#64748b">No location data yet</span>
+      <span style="font-size:11px;max-width:240px;text-align:center;line-height:1.6">Use the mobile app to geofence and mark equipment locations. Coordinates appear here once assigned.</span>
+    </div></div>`;
+  }
+
+  const statusCounts = {ok: 0, warn: 0, fault: 0};
+  allGeoNodes.forEach(n => statusCounts[n.status] = (statusCounts[n.status] || 0) + 1);
+
+  return `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="font-size:12px;color:#0f172a;font-weight:600">${allGeoNodes.length} Equipment Locations</div>
+      <div style="display:flex;gap:6px">
+        ${statusCounts.ok > 0 ? `<span style="font-size:11px;display:flex;align-items:center;gap:5px;padding:4px 10px;background:#dcfce7;border-radius:6px;color:#166534;font-weight:500">
+          <span style="width:7px;height:7px;border-radius:50%;background:var(--ok)"></span>${statusCounts.ok}
+        </span>` : ''}
+        ${statusCounts.warn > 0 ? `<span style="font-size:11px;display:flex;align-items:center;gap:5px;padding:4px 10px;background:#fef9c3;border-radius:6px;color:#92400e;font-weight:500">
+          <span style="width:7px;height:7px;border-radius:50%;background:var(--warn)"></span>${statusCounts.warn}
+        </span>` : ''}
+        ${statusCounts.fault > 0 ? `<span style="font-size:11px;display:flex;align-items:center;gap:5px;padding:4px 10px;background:#fee2e2;border-radius:6px;color:#991b1b;font-weight:500">
+          <span style="width:7px;height:7px;border-radius:50%;background:var(--fault)"></span>${statusCounts.fault}
+        </span>` : ''}
+      </div>
+    </div>
+    <div class="map-wrap" id="map-container" style="height:450px">
+      <svg id="plant-map-svg" class="map-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet"
+        style="height:450px;cursor:grab" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div class="map-zoom">
+        <div class="map-zoom-btn" onclick="mapZoom(1.3)" title="Zoom in">+</div>
+        <div class="map-zoom-btn" onclick="mapZoom(0.77)" title="Zoom out">−</div>
+        <div class="map-zoom-btn" onclick="mapReset()" title="Reset view" style="font-size:13px">⊙</div>
+      </div>
+      <div class="map-info" id="map-info-card"></div>
+      <div class="map-legend collapsed" id="map-legend-panel">
+        <div class="map-legend-toggle" onclick="toggleMapLegend()">
+          <span style="display:flex;align-items:center;gap:6px">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/><path d="M12 8v8m-4-4h8"/>
+            </svg>
+            Equipment Types
+          </span>
+          <span class="map-legend-icon">▼</span>
+        </div>
+        <div class="map-legend-body">
+          ${[['#085041','Plant'],['#0c447c','DNO'],['#3c3489','CSS'],['#633806','SWG'],['#712b13','TX'],['#6b21a8','Inverter'],['#a16207','SCB'],['#274f0a','String']].map(([c,l])=>`
+          <div class="map-legend-row"><div class="map-legend-dot" style="background:${c}"></div>${l}</div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+// ── Map engine ──
+let mapScale=1, mapTx=0, mapTy=0, mapDragging=false, mapDragStart=null;
+
+function initMap(nd){
+  const svg = document.getElementById('plant-map-svg');
+  if(!svg) return;
+  mapScale=1; mapTx=0; mapTy=0;
+
+  const allNodes=[];
+  function walkGeo(n){ if(n.geo) allNodes.push(n); (n.children||[]).forEach(walkGeo); }
+  walkGeo(PLANTS[currentPlant].tree);
+  if(!allNodes.length) return;
+
+  const subtreeIds=new Set();
+  function walkSub(n){ subtreeIds.add(n.id); (n.children||[]).forEach(walkSub); }
+  walkSub(nd);
+
+  svg.innerHTML='';
+
+  // Background
+  const bg=`<rect width="100" height="100" fill="#eef2ea"/>
+    <rect x="2" y="2" width="96" height="96" rx="2" fill="#e8ede4" stroke="#d4dccc" stroke-width=".4"/>`;
+
+  // Decorative solar array panels
+  let arrays='';
+  for(let r=0;r<5;r++) for(let c=0;c<7;c++){
+    arrays+=`<rect x="${9+c*12}" y="${20+r*14}" width="10" height="11" rx="1" fill="#d8e4d0" stroke="#c4d4b8" stroke-width=".3"/>
+    <line x1="${9+c*12}" y1="${25+r*14}" x2="${19+c*12}" y2="${25+r*14}" stroke="#c0cdb0" stroke-width=".3"/>
+    <line x1="${14+c*12}" y1="${20+r*14}" x2="${14+c*12}" y2="${31+r*14}" stroke="#c0cdb0" stroke-width=".3"/>`;
+  }
+
+  // Building zones
+  const zones = currentPlant==='priors' ? [
+    {x:4,y:4,w:18,h:10,label:'Grid',fill:'#e0e8f4',stroke:'#a0b8d4'},
+    {x:10,y:9,w:80,h:78,label:'',fill:'none',stroke:'#b0c8a0',dash:'3,2'},
+    {x:16,y:10,w:68,h:10,label:'CSS Building',fill:'#ede9fe',stroke:'#b8a8d8'},
+    {x:22,y:22,w:40,h:20,label:'Station 1',fill:'rgba(254,243,199,.6)',stroke:'#d4b84a'},
+    {x:24,y:44,w:56,h:36,label:'Station 2',fill:'rgba(254,226,226,.4)',stroke:'#f0a0a0'},
+    {x:26,y:44,w:56,h:16,label:'Inverter Room',fill:'rgba(243,232,255,.6)',stroke:'#c4a0e8'},
+    {x:26,y:62,w:56,h:18,label:'SCB / String Zone',fill:'rgba(254,252,232,.6)',stroke:'#d4c060'},
+  ] : [
+    {x:4,y:4,w:18,h:10,label:'Grid',fill:'#e0e8f4',stroke:'#a0b8d4'},
+    {x:10,y:8,w:80,h:84,label:'',fill:'none',stroke:'#b0c8a0',dash:'3,2'},
+    {x:28,y:8,w:50,h:10,label:'CSS / Switch Room',fill:'#ede9fe',stroke:'#b8a8d8'},
+    {x:18,y:36,w:40,h:14,label:'Inverter House A',fill:'rgba(243,232,255,.6)',stroke:'#c4a0e8'},
+    {x:18,y:54,w:42,h:22,label:'Array Block A',fill:'rgba(240,253,244,.6)',stroke:'#a8c890'},
+    {x:26,y:58,w:52,h:26,label:'Array Block B',fill:'rgba(240,253,244,.5)',stroke:'#a8c890'},
+    {x:28,y:62,w:48,h:14,label:'Inverter House B',fill:'rgba(243,232,255,.5)',stroke:'#c4a0e8'},
+  ];
+
+  const zonesSvg = zones.map(b=>`
+    <rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="2"
+      fill="${b.fill}" stroke="${b.stroke}" stroke-width=".5" ${b.dash?`stroke-dasharray="${b.dash}"`:''} />
+    ${b.label?`<text x="${b.x+1.5}" y="${b.y+3.2}" style="font-size:1.8px;fill:#6b8c6b;font-family:Inter,sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:.04em">${b.label}</text>`:''}
+  `).join('');
+
+  // Geofence ring for selected node
+  const gf = nd.geo ? `<circle cx="${nd.geo.x}" cy="${nd.geo.y}" r="9" fill="#1d4ed8" fill-opacity=".05" stroke="#1d4ed8" stroke-width="1" stroke-dasharray="5,3"/>` : '';
+
+  // Connection lines
+  const lines = allNodes.map(n=>{
+    const par = findParentGeoNode(PLANTS[currentPlant].tree, n.id);
+    if(!par||!par.geo) return '';
+    const inScope = subtreeIds.has(n.id) && subtreeIds.has(par.id);
+    return `<line x1="${par.geo.x}" y1="${par.geo.y}" x2="${n.geo.x}" y2="${n.geo.y}"
+      stroke="${inScope ? LEVEL_COLORS[n.type]||'#94a3b8' : '#ccd8bc'}"
+      stroke-width="${inScope?.7:.3}" opacity="${inScope?.75:.35}"
+      ${!inScope?'stroke-dasharray="1.5,1.5"':''}/>`;
+  }).join('');
+
+  // Pins
+  const pins = allNodes.map(n=>{
+    const inScope = subtreeIds.has(n.id);
+    const isCur = n.id===nd.id;
+    const lc = LEVEL_COLORS[n.type]||'#94a3b8';
+    const sc = n.status==='fault'?'#dc2626':n.status==='warn'?'#ca8a04':'#16a34a';
+    const r = isCur?5:inScope?3.8:2.6;
+    const op = inScope?1:.4;
+    const pulse = n.status==='fault'&&inScope
+      ? `<circle cx="${n.geo.x}" cy="${n.geo.y}" r="8" fill="none" stroke="#dc2626" stroke-width="1.2" class="map-fault-pulse"/>`:'';
+    return `${pulse}
+      <g class="map-pin${isCur?' selected':''}" data-id="${n.id}" onclick="mapSelectPin('${n.id}')" style="opacity:${op}">
+        <circle cx="${n.geo.x}" cy="${n.geo.y}" r="${r+2.5}" fill="${lc}" fill-opacity=".12"/>
+        <circle cx="${n.geo.x}" cy="${n.geo.y}" r="${r}" fill="${lc}" stroke="#fff" stroke-width=".8"/>
+        <circle cx="${n.geo.x}" cy="${n.geo.y}" r="1.4" fill="${sc}"/>
+        ${isCur?`<circle cx="${n.geo.x}" cy="${n.geo.y}" r="${r+4}" fill="none" stroke="${lc}" stroke-width=".7" stroke-dasharray="2,1.5"/>`:''}
+      </g>`;
+  }).join('');
+
+  // Labels (only in-scope nodes)
+  const labels = allNodes.filter(n=>subtreeIds.has(n.id)).map(n=>{
+    const isCur=n.id===nd.id;
+    const lc=LEVEL_COLORS[n.type]||'#64748b';
+    return `<text x="${n.geo.x}" y="${n.geo.y-(isCur?7:5.5)}" text-anchor="middle"
+      style="font-size:${isCur?2.4:1.9}px;fill:${isCur?lc:'#475569'};font-family:Inter,sans-serif;font-weight:${isCur?700:500};pointer-events:none">${n.label}</text>`;
+  }).join('');
+
+  // Compass
+  const compass=`<g transform="translate(93,7)">
+    <circle r="3.5" fill="rgba(255,255,255,.9)" stroke="#e2e8f0" stroke-width=".4"/>
+    <text y="-1" text-anchor="middle" style="font-size:2px;fill:#475569;font-family:Inter,sans-serif;font-weight:700">N</text>
+    <path d="M0,-2.8 L.7,0 L0,1 L-.7,0Z" fill="#0c447c" opacity=".8"/>
+  </g>`;
+
+  const g=document.createElementNS('http://www.w3.org/2000/svg','g');
+  g.id='map-g';
+  g.innerHTML=bg+arrays+zonesSvg+gf+lines+pins+labels+compass;
+  svg.appendChild(g);
+  applyMapTransform();
+  setupMapDrag(svg);
+  if(nd.geo) showMapInfo(nd);
+}
+
+function findParentGeoNode(root, childId, lastGeoParent=null){
+  if(root.id===childId) return lastGeoParent;
+  for(const c of (root.children||[])){
+    const r=findParentGeoNode(c, childId, root.geo?root:lastGeoParent);
+    if(r!==undefined) return r;
+  }
+  return undefined;
+}
+
+function mapSelectPin(id){
+  const nd=findNode(PLANTS[currentPlant].tree,id);
+  if(!nd) return;
+  document.querySelectorAll('.map-pin').forEach(p=>p.classList.remove('selected'));
+  const pin=document.querySelector(`.map-pin[data-id="${id}"]`);
+  if(pin) pin.classList.add('selected');
+  showMapInfo(nd);
+}
+
+function showMapInfo(nd){
+  const card=document.getElementById('map-info-card');
+  if(!card) return;
+  if(!nd.geo){ card.classList.remove('visible'); return; }
+  const sc=nd.status==='fault'?'var(--fault)':nd.status==='warn'?'var(--warn)':'var(--ok)';
+  card.innerHTML=`
+    <div class="map-info-close" onclick="closeMapInfo()" title="Close">&times;</div>
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+      <div style="width:7px;height:7px;border-radius:50%;background:${sc};flex-shrink:0"></div>
+      <div class="map-info-title">${nd.label}</div>
+    </div>
+    <div class="map-info-sub">${nd.sub}</div>
+    ${nd.serial?`<div class="map-info-row"><span class="map-info-k">Serial</span><span class="map-info-v" style="font-family:monospace;font-size:10px;color:#7c3aed">${nd.serial}</span></div>`:''}
+    <div class="map-info-row"><span class="map-info-k">Level</span><span class="map-info-v">${LEVEL_LABELS[nd.type]||nd.type}</span></div>
+    <div class="map-info-row"><span class="map-info-k">Building</span><span class="map-info-v">${nd.geo.building||'-'}</span></div>
+    ${nd.output?`<div class="map-info-row"><span class="map-info-k">Output</span><span class="map-info-v">${nd.output}</span></div>`:''}
+    <div class="map-info-row"><span class="map-info-k">Grid pos.</span><span class="map-info-v" style="font-family:monospace;font-size:10px">${nd.geo.x}, ${nd.geo.y}</span></div>
+    <button onclick="selectById('${nd.id}')" style="width:100%;margin-top:8px;padding:5px 8px;border:1px solid #a7f3d0;border-radius:6px;background:#e6f4ee;font-size:11px;cursor:pointer;color:#1a7f55;font-weight:500;transition:background .15s" onmouseover="this.style.background='#d1fae5'" onmouseout="this.style.background='#e6f4ee'">Open in detail →</button>`;
+  card.classList.add('visible');
+}
+
+function closeMapInfo(){
+  const card=document.getElementById('map-info-card');
+  if(card) card.classList.remove('visible');
+  document.querySelectorAll('.map-pin.selected').forEach(p => p.classList.remove('selected'));
+}
+
+function toggleMapLegend(){
+  const legend=document.getElementById('map-legend-panel');
+  if(!legend) return;
+  legend.classList.toggle('collapsed');
+  legend.classList.toggle('expanded');
+}
+
+function applyMapTransform(){
+  const g=document.getElementById('map-g');
+  if(g) g.setAttribute('transform',`translate(${mapTx},${mapTy}) scale(${mapScale})`);
+}
+function mapZoom(f){ mapScale=Math.min(7,Math.max(.4,mapScale*f)); applyMapTransform(); }
+function mapReset(){ mapScale=1;mapTx=0;mapTy=0; applyMapTransform(); }
+function setupMapDrag(svg){
+  svg.onmousedown=e=>{ mapDragging=true; mapDragStart={x:e.clientX-mapTx,y:e.clientY-mapTy}; svg.style.cursor='grabbing'; };
+  svg.onmousemove=e=>{ if(!mapDragging) return; mapTx=e.clientX-mapDragStart.x; mapTy=e.clientY-mapDragStart.y; applyMapTransform(); };
+  svg.onmouseup=svg.onmouseleave=()=>{ mapDragging=false; svg.style.cursor='grab'; };
+  svg.onwheel=e=>{ e.preventDefault(); mapZoom(e.deltaY<0?1.15:.87); };
+}
+window.mapZoom=mapZoom; window.mapReset=mapReset; window.mapSelectPin=mapSelectPin;
+
+// ═══════════════════════════════════════
+// HELPERS / DATA
+// ═══════════════════════════════════════
+function getTrail(root,targetId,trail=[]){
+  trail.push(root);
+  if(root.id===targetId) return trail;
+  for(const c of (root.children||[])){const r=getTrail(c,targetId,[...trail]);if(r) return r;}
+  return null;
+}
+function findNode(root,id){
+  if(root.id===id) return root;
+  for(const c of (root.children||[])){const r=findNode(c,id);if(r) return r;}
+  return null;
+}
+function countDesc(nd){let c=0;(nd.children||[]).forEach(n=>{c+=1+countDesc(n);});return c;}
+
+function getActivityFor(nd){
+  const base=[
+    {icon:`<span style="color:var(--ok)">${I.check}</span>`,ibg:'#dcfce7',text:`<strong>${nd.label}</strong> telemetry synced`,time:'8s ago',by:'System'},
+    {icon:`<span style="color:var(--blue)">${I.log}</span>`,ibg:'#eff6ff',text:'Preventative schedule checked',time:'2h ago',by:'System'},
+    {icon:`<span style="color:#64748b">${I.info}</span>`,ibg:'#f1f5f9',text:'Properties viewed',time:'1d ago',by:'J. Patel'},
+  ];
+  if(nd.status==='fault') base.unshift({icon:`<span style="color:var(--fault)">${I.alert}</span>`,ibg:'#fee2e2',text:`<strong>FAULT</strong> - trip event on ${nd.label}`,time:'35m ago',by:'System'});
+  if(nd.status==='warn') base.unshift({icon:`<span style="color:var(--warn)">${I.alert}</span>`,ibg:'#fef9c3',text:`<strong>Warning</strong> - over-temp on ${nd.label}`,time:'12m ago',by:'System'});
+  if(nd.serial) base.push({icon:`<span style="color:var(--purple)">${I.serial}</span>`,ibg:'#faf5ff',text:`Serial ${nd.serial} verified against nameplate`,time:'5d ago',by:'Admin'});
+  return base;
+}
+
+function getMaintenanceFor(nd){
+  return [
+    {date:'01 Apr 2026',title:'Preventative maintenance',sub:'Annual PM - all checks passed.',type:'PM',bc:'#dcfce7',tc:'#166534'},
+    {date:'14 Feb 2026',title:'Oil sample / thermal check',sub:'Results within normal range.',type:'Inspection',bc:'#eff6ff',tc:'#1e40af'},
+    {date:'20 Nov 2025',title:'Thermal imaging survey',sub:'Hot spot found on busbar - resolved.',type:'Survey',bc:'#fef3c7',tc:'#92400e'},
+    {date:'05 Aug 2025',title:'Corrective maintenance',sub:'Fuse replacement on string 3.',type:'Corrective',bc:'#fee2e2',tc:'#991b1b'},
+    {date:'01 Apr 2025',title:'Preventative maintenance',sub:'Annual PM completed.',type:'PM',bc:'#dcfce7',tc:'#166534'},
+  ];
+}
+
+function getReplaceHist(nd){
+  if(!nd.serial) return [{title:'No replacement history - serial not assigned',date:'-',by:'-',type:'none'}];
+  return [
+    {title:`${nd.serial} - installed (current)`,date:'01 Apr 2026',by:'J. Patel',type:'installed'},
+    {title:'SN-PREV-001 - removed (fault)',date:'30 Mar 2026',by:'A. Singh',type:'replaced'},
+    {title:'SN-PREV-001 - installed',date:'15 Jun 2022',by:'Commissioning team',type:'installed'},
+    {title:'SN-ORIG-001 - removed (end of life)',date:'14 Jun 2022',by:'Commissioning team',type:'replaced'},
+  ];
+}
+
+// ═══════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════
+renderTree();
+selectNode(PLANTS[currentPlant].tree);
+
+setInterval(()=>{
+  const el=document.getElementById('hdr-output');
+  if(el) el.textContent=(4.1+Math.random()*.2).toFixed(1)+' MW';
+},4000);
+</script>
+</body>
+</html>
