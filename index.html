@@ -532,31 +532,31 @@ function ashTree(){
               [{k:'Rating',v:'1.5 MVA'},{k:'Oil sample',v:'14 Apr 2026'}],[
               node('inv-1','inv','Inverter/s 1','String inverter group','inv','bg-inv','ok','SN-INV-ASH-001','350 kW','String',
                 [{k:'Output',v:'350 kW'},{k:'Temp',v:'44°C'}],[
-                node('inv-1-1','inv-unit','Inverter 1.1','118 kW','inv','bg-inv','ok','SN-44820','118 kW','String',[{k:'Output',v:'118 kW'},{k:'Temp',v:'42°C'}],[],{x:38,y:52,building:'Inverter Room A',lat:51.28500,lng:1.31400}),
-                node('inv-1-2','inv-unit','Inverter 1.2','120 kW','inv','bg-inv','ok','SN-44821','120 kW','String',[{k:'Output',v:'120 kW'},{k:'Temp',v:'45°C'}],[],{x:54,y:52,building:'Inverter Room A',lat:51.28490,lng:1.31450}),
-                node('inv-1-3','inv-unit','Inverter 1.3','Over-temp warning','inv','bg-inv','warn','SN-44822','112 kW','String',[{k:'Output',v:'112 kW'},{k:'Temp',v:'58°C ⚠'}],[],{x:70,y:52,building:'Inverter Room A',lat:51.28480,lng:1.31500}),
-              ],{x:54,y:44,building:'Inverter Room A',lat:51.28490,lng:1.31450}),
-            ],{x:54,y:36,building:'Station 1 Block',lat:51.28440,lng:1.31490}),
-          ],{x:40,y:28,building:'Station 1 Block',lat:51.28430,lng:1.31520}),
+                node('inv-1-1','inv-unit','Inverter 1.1','118 kW','inv','bg-inv','ok','SN-44820','118 kW','String',[{k:'Output',v:'118 kW'},{k:'Temp',v:'42°C'}],[],{x:38,y:52,building:'Inverter Room A',lat:51.28420,lng:1.31380}),
+                node('inv-1-2','inv-unit','Inverter 1.2','120 kW','inv','bg-inv','ok','SN-44821','120 kW','String',[{k:'Output',v:'120 kW'},{k:'Temp',v:'45°C'}],[],{x:54,y:52,building:'Inverter Room A',lat:51.28380,lng:1.31280}),
+                node('inv-1-3','inv-unit','Inverter 1.3','Over-temp warning','inv','bg-inv','warn','SN-44822','112 kW','String',[{k:'Output',v:'112 kW'},{k:'Temp',v:'58°C ⚠'}],[],{x:70,y:52,building:'Inverter Room A',lat:51.28300,lng:1.31300}),
+              ],{x:54,y:44,building:'Inverter Room A',lat:51.28400,lng:1.31290}),
+            ],{x:54,y:36,building:'Station 1 Block',lat:51.28420,lng:1.31310}),
+          ],{x:40,y:28,building:'Station 1 Block',lat:51.28410,lng:1.31390}),
           node('st2-swg','sswg','Station 2 SWG','SWG1 + SWG2','swg','bg-swg','fault','SN-SSWG-002',null,null,
             [{k:'Panels below',v:'288'}],[
             node('tx-2','tx','Station 2 TX','TX1 + TX2','tx','bg-tx','fault','SN-TX-0042','980 kW',null,
               [{k:'Rating',v:'1.5 MVA'},{k:'Task',v:'#882 - trip fault'}],[
               node('inv-2-1','inv','Inverter 2.1','FAULT - tripped','inv','bg-inv','fault','SN-12312','0 kW','String',
                 [{k:'Status',v:'FAULT - tripped'}],[
-                node('scb-2-1','scb','SCB 2.1','0 kW - check fuses','scb','bg-scb','fault','SN-SCB-001','0 kW',null,[{k:'Strings',v:'6'},{k:'Fuses',v:'Check required'}],[],{x:38,y:72,building:'Station 2 Block',lat:51.28340,lng:1.31480}),
-              ],{x:38,y:64,building:'Station 2 Block',lat:51.28390,lng:1.31450}),
+                node('scb-2-1','scb','SCB 2.1','0 kW - check fuses','scb','bg-scb','fault','SN-SCB-001','0 kW',null,[{k:'Strings',v:'6'},{k:'Fuses',v:'Check required'}],[],{x:38,y:72,building:'Station 2 Block',lat:51.28160,lng:1.31550}),
+              ],{x:38,y:64,building:'Station 2 Block',lat:51.28180,lng:1.31570}),
               node('inv-2-2','inv','Inverter 2.2','490 kW','inv','bg-inv','ok','SN-1232','490 kW','String',
                 [{k:'Output',v:'490 kW'}],[
-                node('scb-2-2','scb','SCB 2.2','245 kW','scb','bg-scb','ok','SN-SCB-002','245 kW',null,[{k:'Strings',v:'6'}],[],{x:56,y:72,building:'Station 2 Block',lat:51.28410,lng:1.31450}),
-                node('scb-2-3','scb','SCB 2.3','245 kW','scb','bg-scb','ok','SN-SCB-003','245 kW',null,[{k:'Strings',v:'6'}],[],{x:72,y:72,building:'Station 2 Block',lat:51.28460,lng:1.31520}),
-              ],{x:56,y:64,building:'Station 2 Block',lat:51.28400,lng:1.31400}),
-            ],{x:54,y:56,building:'Station 2 Block',lat:51.28380,lng:1.31500}),
-          ],{x:70,y:28,building:'Station 2 Block',lat:51.28450,lng:1.31540}),
-          node('swg-1b','swg','SWG 1b','Station 3 + 4','swg','bg-swg','ok','SN-SWG-002','2.1 MW',null,[{k:'Rating',v:'3.5 MVA'}],[],{x:82,y:20,building:'CSS Building',lat:51.28460,lng:1.31560}),
-          node('aux-tx','css','CSS Aux TX','Auxiliary transformer','tx','bg-css','ok','SN-AUXTX-001',null,null,[{k:'Rating',v:'500 kVA'}],[],{x:22,y:20,building:'CSS Building',lat:51.28420,lng:1.31500}),
-        ],{x:52,y:14,building:'CSS Building',lat:51.28430,lng:1.31520}),
-      ],{x:10,y:14,building:'Grid Connection',lat:51.28410,lng:1.31490}),
+                node('scb-2-2','scb','SCB 2.2','245 kW','scb','bg-scb','ok','SN-SCB-002','245 kW',null,[{k:'Strings',v:'6'}],[],{x:56,y:72,building:'Station 2 Block',lat:51.28200,lng:1.31680}),
+                node('scb-2-3','scb','SCB 2.3','245 kW','scb','bg-scb','ok','SN-SCB-003','245 kW',null,[{k:'Strings',v:'6'}],[],{x:72,y:72,building:'Station 2 Block',lat:51.28240,lng:1.31720}),
+              ],{x:56,y:64,building:'Station 2 Block',lat:51.28220,lng:1.31700}),
+            ],{x:54,y:56,building:'Station 2 Block',lat:51.28200,lng:1.31620}),
+          ],{x:70,y:28,building:'Station 2 Block',lat:51.28240,lng:1.31650}),
+          node('swg-1b','swg','SWG 1b','Station 3 + 4','swg','bg-swg','ok','SN-SWG-002','2.1 MW',null,[{k:'Rating',v:'3.5 MVA'}],[],{x:82,y:20,building:'CSS Building',lat:51.28480,lng:1.31400}),
+          node('aux-tx','css','CSS Aux TX','Auxiliary transformer','tx','bg-css','ok','SN-AUXTX-001',null,null,[{k:'Rating',v:'500 kVA'}],[],{x:22,y:20,building:'CSS Building',lat:51.28380,lng:1.31480}),
+        ],{x:52,y:14,building:'CSS Building',lat:51.28450,lng:1.31450}),
+      ],{x:10,y:14,building:'Grid Connection',lat:51.28470,lng:1.31420}),
     ],{x:52,y:6,building:'Site'}),
   ]);
 }
@@ -1552,11 +1552,27 @@ function addGeofence(){
   
   // Geofence boundary for Ash Solar Farm
   const plantGeofence = [
-    [51.28557111179551, 1.314837116177057],
-    [51.28429431672192, 1.3131401947229795],
-    [51.28308132852434, 1.315219880414819],
-    [51.28425441630394, 1.316585072862836],
-    [51.28557111179551, 1.314837116177057]
+    [51.28561254933146, 1.314869087287622],
+    [51.28473475732336, 1.3138483826428424],
+    [51.28344995877252, 1.3119983554741792],
+    [51.283138728871286, 1.311755938121044],
+    [51.2827476934419, 1.3118452497774622],
+    [51.282540203902954, 1.3121897375950755],
+    [51.282101280635864, 1.312559743028808],
+    [51.28187782717961, 1.3129297484625406],
+    [51.28166235317441, 1.3135804476735875],
+    [51.281606489360506, 1.3137845886144606],
+    [51.28125534394436, 1.313963211927297],
+    [51.28104784766391, 1.314422529017448],
+    [51.28098400245907, 1.315851515511407],
+    [51.28116755716397, 1.31620876213708],
+    [51.28146283928054, 1.3164639382982748],
+    [51.28134313054315, 1.3169487730045453],
+    [51.28146283928054, 1.3172677432060387],
+    [51.28159052825659, 1.3175229193672338],
+    [51.28203743687733, 1.3193474289197773],
+    [51.28420009394484, 1.3166935968433504],
+    [51.28561254933146, 1.314869087287622]
   ];
 
   const geofencePolygon = L.polygon(plantGeofence, {
