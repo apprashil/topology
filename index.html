@@ -242,6 +242,7 @@ html,body{height:100%;font-family:'Inter',sans-serif;font-size:13px;background:#
 #real-map{width:100%;height:100%;border-radius:10px}
 .leaflet-container{font-family:'Inter',sans-serif}
 .custom-marker{width:32px;height:32px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .2s}
+.custom-marker svg{width:16px;height:16px;stroke:#fff;fill:none}
 .custom-marker:hover{transform:scale(1.2);z-index:1000}
 .marker-ok{background:#16a34a}
 .marker-warn{background:#ca8a04}
@@ -389,14 +390,14 @@ html,body{height:100%;font-family:'Inter',sans-serif;font-size:13px;background:#
     </div>
   </div>
   <div class="live-pill"><div class="live-dot"></div>Live · 8s ago</div>
-  <button class="map-view-toggle" id="map-view-toggle" onclick="toggleMapView()">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-      <circle cx="12" cy="10" r="3"/>
-    </svg>
-    <span id="map-view-label">Map View</span>
-  </button>
   <div class="topbar-kpis">
+    <button class="map-view-toggle" id="map-view-toggle" onclick="toggleMapView()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+        <circle cx="12" cy="10" r="3"/>
+      </svg>
+      <span id="map-view-label">Map View</span>
+    </button>
     <div class="kpi-chip"><div class="kpi-v" id="hdr-output">2.8 MW</div><div class="kpi-l">Output</div></div>
     <div class="kpi-chip"><div class="kpi-v">96.4%</div><div class="kpi-l">Availability</div></div>
     <div class="kpi-chip"><div class="kpi-v text-danger" id="hdr-tickets">3</div><div class="kpi-l">Open tickets</div></div>
@@ -1610,11 +1611,12 @@ function addGeoEquipmentMarkers(allNodes, currentNode){
     const statusColor = n.status === 'ok' ? '#16a34a' : 
                        n.status === 'warn' ? '#ca8a04' : '#dc2626';
 
+    // Use equipment-specific icon from the I object
+    const equipmentIcon = I[n.type] || I.panel;
+    
     const iconHtml = `
       <div class="custom-marker ${statusClass}">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
-          <path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/>
-        </svg>
+        ${equipmentIcon}
       </div>
     `;
 
